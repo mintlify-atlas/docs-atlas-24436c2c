@@ -1,0 +1,343 @@
+---
+title: Working Files
+description: Learn how to manage working files, create revisions, and track artist work in Kitsu
+---
+
+## Overview
+
+Working files are versioned files used by artists to produce output files. Each working file is linked to a task and tracks revisions of work in progress. Working files support automatic revision numbering and path generation based on file tree templates.
+
+## Working File Model
+
+Working files contain the following key properties:
+
+- **id**: Unique identifier (UUID)
+- **name**: File name (default: "main")
+- **revision**: Version number (auto-incremented)
+- **path**: Full file path generated from template
+- **task_id**: Associated task
+- **entity_id**: Associated entity (asset/shot)
+- **person_id**: Author
+- **software_id**: Software used
+- **comment**: Description of changes
+- **created_at**: Creation timestamp
+- **updated_at**: Last modification timestamp
+
+## Core Operations
+
+### Create Working File
+
+Create a new working file revision for a task:
+
+```python
+POST /api/data/tasks/{task_id}/working-files/new
+```
+
+**Request Body:**
+
+```json
+{
+  "name": "main",
+  "comment": "Updated lighting and materials",
+  "software_id": "a24a6ea4-ce75-4665-a070-57453082c25",
+  "revision": 0  // 0 = auto-increment
+}
+```
+
+**Response:**
+
+```json
+{
+  "id": "b35b7fb5-df86-5776-b181-68564193d36",
+  "name": "main",
+  "revision": 1,
+  "path": "/project/asset/working/main_v001.blend",
+  "task_id": "a24a6ea4-ce75-4665-a070-57453082c25",
+  "comment": "Updated lighting and materials",
+  "created_at": "2023-01-01T12:00:00Z",
+  "updated_at": "2023-01-01T12:00:00Z"
+}
+```
+
+Source: `zou/app/blueprints/files/resources.py:798-942`
+
+### List Working Files
+
+Get all working file revisions for a task:
+
+```python
+GET /api/data/tasks/{task_id}/working-files
+```
+
+**Response:**
+
+```json
+[
+  {
+    "id": "b35b7fb5-df86-5776-b181-68564193d36",
+    "name": "main",
+    "revision": 2,
+    "path": "/project/asset/working/main_v002.blend",
+    "updated_at": "2023-01-02T14:30:00Z"
+  },
+  {
+    "id": "c46c8gc6-eg97-6887-c292-79675204e47",
+    "name": "main",
+    "revision": 1,
+    "path": "/project/asset/working/main_v001.blend",
+    "updated_at": "2023-01-01T12:00:00Z"
+  }
+]
+```
+
+Source: `zou/app/blueprints/files/resources.py:734-792`
+
+### Get Last Revisions
+
+Get the latest revision for each file name:
+
+```python
+GET /api/data/tasks/{task_id}/working-files/last-revisions
+```
+
+**Response:**
+
+```json
+{
+  "main": {
+    "id": "b35b7fb5-df86-5776-b181-68564193d36",
+    "name": "main",
+    "revision": 3,
+    "updated_at": "2023-01-03T16:00:00Z"
+  },
+  "cache": {
+    "id": "d57d9hd7-fh08-7998-d403-80786315f58",
+    "name": "cache",
+    "revision": 1,
+    "updated_at": "2023-01-02T10:00:00Z"
+  }
+}
+```
+
+Source: `zou/app/services/files_service.py:163-197`
+
+### Get Working Files by Entity
+
+Retrieve working files for an entity with optional filters:
+
+```python
+GET /api/data/entities/{entity_id}/working-files?task_id={task_id}&name={name}
+```
+
+**Query Parameters:**
+
+- `task_id` (optional): Filter by task
+- `name` (optional): Filter by file name
+
+Source: `zou/app/services/files_service.py:361-380`
+
+## File Upload & Storage
+
+### Upload Working File
+
+Upload the actual file content to storage:
+
+```python
+POST /api/data/working-files/{working_file_id}/file
+```
+
+**Request:** Multipart form data with file
+
+```bash
+curl -X POST \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "file=@scene_v001.blend" \
+  "https://kitsu.example.com/api/data/working-files/{working_file_id}/file"
+```
+
+**Response:**
+
+```json
+{
+  "id": "b35b7fb5-df86-5776-b181-68564193d36",
+  "name": "main",
+  "revision": 1,
+  "path": "/project/asset/working/main_v001.blend",
+  "updated_at": "2023-01-01T12:30:00Z"
+}
+```
+
+Source: `zou/app/blueprints/files/resources.py:158-236`
+
+### Download Working File
+
+Download the file content from storage:
+
+```python
+GET /api/data/working-files/{working_file_id}/file
+```
+
+**Response:** Binary file content with caching headers
+
+Source: `zou/app/blueprints/files/resources.py:102-155`
+
+## File Paths
+
+### Generate Working File Path
+
+Generate a file path from the file tree template:
+
+```python
+POST /api/data/tasks/{task_id}/working-file-path
+```
+
+**Request Body:**
+
+```json
+{
+  "name": "main",
+  "software_id": "a24a6ea4-ce75-4665-a070-57453082c25",
+  "revision": 0,  // 0 = auto-compute next revision
+  "separator": "/"
+}
+```
+
+**Response:**
+
+```json
+{
+  "path": "/project/asset/working/main_v001.blend",
+  "name": "main_v001.blend"
+}
+```
+
+Source: `zou/app/blueprints/files/resources.py:239-380`
+
+## Revision Management
+
+### Get Next Revision
+
+Get the next available revision number:
+
+```python
+# Automatically handled by create endpoint when revision=0
+revision = files_service.get_next_working_revision(task_id, name)
+```
+
+Source: `zou/app/services/files_service.py:200-213`
+
+### Revision Numbering
+
+- Revisions start at 1
+- Revisions are unique per task + file name combination
+- Setting `revision=0` triggers automatic increment
+- Manual revision numbers can be specified
+
+## File Metadata
+
+### Update Comment
+
+Update the comment on a working file:
+
+```python
+PUT /api/actions/working-files/{working_file_id}/comment
+```
+
+**Request Body:**
+
+```json
+{
+  "comment": "Fixed UV mapping issues"
+}
+```
+
+**Response:**
+
+```json
+{
+  "id": "b35b7fb5-df86-5776-b181-68564193d36",
+  "comment": "Fixed UV mapping issues",
+  "updated_at": "2023-01-01T12:30:00Z"
+}
+```
+
+Source: `zou/app/blueprints/files/resources.py:1036-1111`
+
+### Update Modification Date
+
+Update the modification timestamp:
+
+```python
+PUT /api/actions/working-files/{working_file_id}/modified
+```
+
+Updates `updated_at` to current time.
+
+Source: `zou/app/blueprints/files/resources.py:988-1033`
+
+## Best Practices
+
+### Naming Conventions
+
+- Use "main" for primary working files
+- Use descriptive names for specialized files ("cache", "proxy", etc.)
+- Keep names consistent across tasks
+
+### Revision Workflow
+
+1. Create working file entry (auto-increments revision)
+2. Upload file content to storage
+3. Add meaningful comments to track changes
+4. When satisfied, create output file from working file
+
+### File Organization
+
+- Working files are organized by task
+- Each task can have multiple named files
+- Each named file can have multiple revisions
+- Only the latest revision is typically used in production
+
+## Example Workflow
+
+```python
+import requests
+
+# 1. Create new working file revision
+response = requests.post(
+    f"{base_url}/api/data/tasks/{task_id}/working-files/new",
+    json={
+        "name": "main",
+        "comment": "Initial version",
+        "software_id": software_id,
+        "revision": 0  # Auto-increment
+    },
+    headers={"Authorization": f"Bearer {token}"}
+)
+working_file = response.json()
+
+# 2. Upload file content
+with open("scene.blend", "rb") as f:
+    requests.post(
+        f"{base_url}/api/data/working-files/{working_file['id']}/file",
+        files={"file": f},
+        headers={"Authorization": f"Bearer {token}"}
+    )
+
+# 3. Later: create output file from working file
+response = requests.post(
+    f"{base_url}/api/data/entities/{entity_id}/output-files/new",
+    json={
+        "working_file_id": working_file["id"],
+        "output_type_id": output_type_id,
+        "task_type_id": task_type_id,
+        "comment": "Final render"
+    },
+    headers={"Authorization": f"Bearer {token}"}
+)
+```
+
+## Related Resources
+
+- [Output Files](/api/files/output-files) - Published files from working files
+- [Preview Files](/api/files/preview-files) - Preview media for review
+- [Tasks](/api/tasks/overview) - Task management

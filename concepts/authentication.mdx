@@ -1,0 +1,536 @@
+---
+title: Authentication
+description: JWT token system, login strategies, and two-factor authentication
+---
+
+## Overview
+
+Zou uses JWT (JSON Web Tokens) for stateless authentication. The system supports multiple authentication strategies and optional two-factor authentication for enhanced security.
+
+## Authentication Strategies
+
+Zou supports three authentication strategies configurable via the `AUTH_STRATEGY` environment variable:
+
+### Local Authentication (Default)
+
+```python
+AUTH_STRATEGY = "auth_local_classic"
+```
+
+Traditional username/password authentication with BCrypt password hashing.
+
+```python zou/app/services/auth_service.py
+def local_auth_strategy(person, password, app=None):
+    """
+    Local strategy checks that email and password hash match.
+    Password comparison is based on BCrypt.
+    """
+    password_hash = person["password"] or ""
+    if password_hash and flask_bcrypt.check_password_hash(password_hash, password):
+        return person
+    else:
+        raise WrongPasswordException()
+```
+
+<Note>
+BCrypt automatically includes salt and uses configurable work factor (default: 12 rounds).
+</Note>
+
+### LDAP/Active Directory
+
+```python
+AUTH_STRATEGY = "auth_remote_ldap"
+```
+
+Authenticates users against an LDAP or Active Directory server.
+
+<Accordion title="LDAP Configuration">
+```bash
+# LDAP Server
+LDAP_HOST=ldap.company.com
+LDAP_PORT=389
+LDAP_SSL=false
+
+# LDAP Settings
+LDAP_BASE_DN=cn=Users,dc=company,dc=com
+LDAP_DOMAIN=company.com
+LDAP_IS_AD=true  # Active Directory mode
+LDAP_IS_AD_SIMPLE=false  # Use simple bind instead of NTLM
+
+# Fallback to local auth for non-LDAP users
+LDAP_FALLBACK=true
+```
+</Accordion>
+
+```python
+def ldap_auth_strategy(person, password, app):
+    if person["is_generated_from_ldap"]:
+        # Connect to LDAP server
+        server = Server(f"{app.config['LDAP_HOST']}:{app.config['LDAP_PORT']}", 
+                       get_info=ALL, use_ssl=app.config['LDAP_SSL'])
+        
+        if app.config['LDAP_IS_AD']:
+            user = f"{app.config['LDAP_DOMAIN']}\\{person['desktop_login']}"
+            authentication = NTLM
+        else:
+            user = f"uid={person['desktop_login']},{app.config['LDAP_BASE_DN']}"
+            authentication = SIMPLE
+        
+        conn = Connection(server, user=user, password=password, 
+                         authentication=authentication)
+        conn.bind()
+        return person
+    elif app.config['LDAP_FALLBACK']:
+        # Fall back to local authentication
+        return local_auth_strategy(person, password, app)
+```
+
+### No Password (Development)
+
+```python
+AUTH_STRATEGY = "auth_local_no_password"
+```
+
+<Warning>
+Only use this in development environments. It bypasses password verification entirely.
+</Warning>
+
+## JWT Token System
+
+### Token Types
+
+Zou uses two types of JWT tokens:
+
+| Token Type | Purpose | Expires | Storage |
+|------------|---------|---------|----------|
+| **Access Token** | API authentication | 7 days | Cookie + Header |
+| **Refresh Token** | Renew access token | 15 days | Cookie only |
+
+### Token Configuration
+
+```python zou/app/config.py
+JWT_ACCESS_TOKEN_EXPIRES = timedelta(days=7)
+JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=15)
+JWT_TOKEN_LOCATION = ["cookies", "headers"]
+JWT_COOKIE_CSRF_PROTECT = False
+JWT_COOKIE_SAMESITE = "Lax"
+JWT_IDENTITY_CLAIM = "sub"  # User ID in 'sub' claim
+```
+
+### Token Payload
+
+JWT tokens contain:
+
+```json
+{
+  "sub": "user-uuid",              // User ID
+  "identity_type": "person",       // person, bot, or person_api
+  "jti": "token-unique-id",        // Token ID for blacklist
+  "exp": 1234567890,                // Expiration timestamp
+  "iat": 1234567890,                // Issued at timestamp
+  "requires_2fa_setup": false       // 2FA enforcement flag
+}
+```
+
+## Login Flow
+
+### Standard Login
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant A as API
+    participant D as Database
+    participant R as Redis
+    
+    C->>A: POST /auth/login {email, password}
+    A->>D: Find user by email
+    D-->>A: User data
+    A->>A: Verify password hash
+    A->>A: Generate JWT tokens
+    A->>R: Store session info
+    A-->>C: Set-Cookie (access + refresh tokens)
+    A-->>C: {user, access_token}
+```
+
+### Login Request
+
+```bash
+curl -X POST http://localhost:5000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "artist@studio.com",
+    "password": "securepassword"
+  }'
+```
+
+### Login Response
+
+```json
+{
+  "user": {
+    "id": "uuid",
+    "email": "artist@studio.com",
+    "first_name": "John",
+    "last_name": "Doe",
+    "role": "user",
+    "active": true
+  },
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+<Info>
+Tokens are also set as HTTP-only cookies for browser clients.
+</Info>
+
+## Token Usage
+
+### Authorization Header
+
+```bash
+curl -X GET http://localhost:5000/api/data/projects \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+```
+
+### Cookie (Browser)
+
+When using cookies, tokens are sent automatically:
+
+```javascript
+fetch('http://localhost:5000/api/data/projects', {
+  credentials: 'include'  // Include cookies
+})
+```
+
+## Token Refresh
+
+### Refresh Flow
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant A as API
+    participant R as Redis
+    
+    C->>A: POST /auth/refresh-token
+    Note over C,A: Refresh token in cookie
+    A->>R: Check if token blacklisted
+    R-->>A: Not blacklisted
+    A->>A: Generate new access token
+    A-->>C: Set-Cookie (new access token)
+    A-->>C: {access_token}
+```
+
+### Refresh Request
+
+```bash
+curl -X POST http://localhost:5000/auth/refresh-token \
+  --cookie "refresh_token_cookie=eyJ..."
+```
+
+<Note>
+Refresh tokens can only be used at the `/auth/refresh-token` endpoint.
+</Note>
+
+## Token Revocation (Logout)
+
+### Logout Flow
+
+```python zou/app/services/auth_service.py
+def logout(jti):
+    """Remove access and refresh tokens from auth token store."""
+    try:
+        auth_tokens_store.add(jti, "true", current_app.config["JWT_ACCESS_TOKEN_EXPIRES"])
+    except Exception:
+        pass
+```
+
+Tokens are added to a Redis-based blacklist with TTL matching token expiration.
+
+### Token Blacklist Check
+
+```python zou/app/__init__.py
+@jwt.token_in_blocklist_loader
+def check_if_token_is_revoked(_, payload):
+    identity_type = payload.get("identity_type")
+    if identity_type == "person":
+        return auth_tokens_store.is_revoked(payload["jti"])
+    elif identity_type in ["bot", "person_api"]:
+        return persons_service.is_jti_revoked(payload["jti"])
+    else:
+        return True
+```
+
+## Two-Factor Authentication
+
+Zou supports three 2FA methods:
+
+### TOTP (Time-based One-Time Password)
+
+Authenticator app-based 2FA (Google Authenticator, Authy, etc.).
+
+#### Enable TOTP
+
+1. **Pre-enable**: Generate secret and QR code
+
+```python
+def pre_enable_totp(person_id):
+    person = Person.get(person_id)
+    person.totp_secret = pyotp.random_base32()
+    totp = pyotp.TOTP(person.totp_secret)
+    
+    organisation = persons_service.get_organisation()
+    totp_uri = totp.provisioning_uri(
+        name=person.email, 
+        issuer_name=f"Kitsu {organisation['name']}"
+    )
+    person.save()
+    return totp_uri, person.totp_secret
+```
+
+2. **Enable**: Verify code and activate
+
+```python
+def enable_totp(person_id, totp):
+    person = Person.get(person_id)
+    if pyotp.TOTP(person.totp_secret).verify(totp):
+        person.totp_enabled = True
+        # Generate recovery codes
+        otp_recovery_codes = generate_recovery_codes()  # 16 codes
+        person.otp_recovery_codes = hash_recovery_codes(otp_recovery_codes)
+        person.save()
+        return otp_recovery_codes
+```
+
+#### Login with TOTP
+
+```bash
+curl -X POST http://localhost:5000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@studio.com",
+    "password": "password",
+    "totp": "123456"
+  }'
+```
+
+### Email OTP
+
+One-time code sent via email (HOTP-based).
+
+```python
+def send_email_otp(person):
+    # Generate random counter
+    count = random.randint(0, 999999999999)
+    otp = pyotp.HOTP(person["email_otp_secret"]).at(count)
+    
+    # Store counter in Redis (5 min TTL)
+    auth_tokens_store.add(
+        f"email-otp-count-{person['email']}", 
+        count, 
+        ttl=60 * 5
+    )
+    
+    # Send email
+    emails.send_email(
+        subject="Your login code",
+        body=f"Your code is: {otp}",
+        recipient=person["email"]
+    )
+```
+
+### FIDO2/WebAuthn
+
+Hardware key or biometric authentication.
+
+```python
+def pre_register_fido(person_id):
+    person = Person.get(person_id)
+    options, state = current_app.extensions["fido_server"].register_begin(
+        PublicKeyCredentialUserEntity(
+            id=str(person.id).encode(),
+            name=person.email,
+            display_name=person.full_name
+        ),
+        credentials=get_existing_credentials(person),
+        user_verification="preferred",
+        authenticator_attachment="cross-platform"
+    )
+    session[f"fido-state-{person.id}"] = state
+    return dict(options.public_key)
+```
+
+<Info>
+FIDO2 supports:
+- USB security keys (YubiKey, etc.)
+- Platform authenticators (Touch ID, Windows Hello)
+- Bluetooth/NFC devices
+</Info>
+
+## Mandatory 2FA Enforcement
+
+### Configuration
+
+```bash
+ENFORCE_2FA=true
+2FA_EXEMPT_USERS=admin@studio.com,service@studio.com
+```
+
+When enabled, users without 2FA are restricted to setup endpoints until configured.
+
+### Enforcement Logic
+
+```python zou/app/__init__.py
+@jwt.user_lookup_loader
+def user_lookup_callback(_, payload):
+    identity = persons_service.get_person_raw_cached(payload["sub"])
+    
+    if payload.get("requires_2fa_setup"):
+        allowed_paths = {
+            "/auth/totp",
+            "/auth/email-otp",
+            "/auth/fido",
+            "/auth/logout",
+        }
+        if request.path not in allowed_paths:
+            raise TwoFactorAuthenticationRequiredException()
+    
+    return identity
+```
+
+## Recovery Codes
+
+When 2FA is enabled, users receive 16 single-use recovery codes:
+
+```python
+def generate_recovery_codes():
+    return [
+        ''.join(random.choice(string.ascii_uppercase + string.digits) 
+                for _ in range(10))
+        for _ in range(16)
+    ]
+
+def hash_recovery_codes(recovery_codes):
+    return [flask_bcrypt.generate_password_hash(code) 
+            for code in recovery_codes]
+```
+
+Recovery codes are BCrypt-hashed and stored as an array.
+
+## Security Features
+
+### Password Requirements
+
+```python
+MIN_PASSWORD_LENGTH = 8  # Configurable
+```
+
+### Rate Limiting
+
+Login attempts are rate-limited:
+
+```python
+def check_login_failed_attemps(person):
+    login_failed_attemps = person["login_failed_attemps"] or 0
+    if (
+        login_failed_attemps >= 5
+        and person["last_login_failed"] + timedelta(minutes=1) 
+        > datetime.now()
+    ):
+        raise TooMuchLoginFailedAttemps()
+    return login_failed_attemps
+```
+
+<Warning>
+After 5 failed attempts, accounts are locked for 1 minute.
+</Warning>
+
+### Secret Key
+
+JWT tokens are signed with a secret key:
+
+```bash
+SECRET_KEY=your-secret-key-here  # Change in production!
+```
+
+<Warning>
+Use a strong, randomly generated secret key in production. If the key is compromised, all tokens can be forged.
+</Warning>
+
+## Identity Types
+
+Zou supports three identity types:
+
+| Type | Description | Use Case |
+|------|-------------|----------|
+| `person` | Regular user | Human users logging in |
+| `bot` | Service account | Automated systems, integrations |
+| `person_api` | API key user | Personal API tokens |
+
+### Bot Accounts
+
+Bots use long-lived tokens stored in the `jti` field:
+
+```python
+class Person:
+    is_bot = db.Column(db.Boolean(), default=False)
+    jti = db.Column(db.String(60), unique=True)  # Bot's permanent token ID
+```
+
+## SAML SSO
+
+Enterprise single sign-on support:
+
+```bash
+SAML_ENABLED=true
+SAML_IDP_NAME="Company SSO"
+SAML_METADATA_URL=https://idp.company.com/metadata
+```
+
+SAML flow:
+1. User clicks "Login with SSO"
+2. Redirect to IdP (Identity Provider)
+3. User authenticates at IdP
+4. IdP redirects back with SAML assertion
+5. Zou validates assertion and creates session
+
+## Best Practices
+
+<Accordion title="Token Storage">
+- Store tokens in HTTP-only cookies to prevent XSS
+- Use `SameSite=Lax` cookie attribute
+- Never store tokens in localStorage (XSS vulnerable)
+- For mobile apps, use secure keychain/keystore
+</Accordion>
+
+<Accordion title="Token Expiration">
+- Keep access token lifetime short (hours/days)
+- Use refresh tokens for long-term sessions
+- Implement automatic token refresh before expiration
+- Clear tokens on logout
+</Accordion>
+
+<Accordion title="2FA Recommendations">
+- Encourage all users to enable 2FA
+- Enforce 2FA for admin/manager accounts
+- Provide recovery codes and keep them secure
+- Support multiple 2FA methods for flexibility
+</Accordion>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Permissions" icon="shield" href="./permissions">
+    Learn about role-based access control
+  </Card>
+  <Card title="User Management" icon="users" href="/api-reference/persons">
+    Manage users and their access
+  </Card>
+  <Card title="Architecture" icon="sitemap" href="./architecture">
+    Understand the system architecture
+  </Card>
+  <Card title="API Security" icon="lock" href="/guides/api-usage">
+    Secure API integration guide
+  </Card>
+</CardGroup>

@@ -1,0 +1,981 @@
+---
+title: 'Two-Factor Authentication'
+description: 'Endpoints for configuring and managing two-factor authentication (TOTP, Email OTP, FIDO)'
+icon: 'shield-halved'
+---
+
+## Overview
+
+Zou supports multiple two-factor authentication (2FA) methods:
+
+- **TOTP** (Time-based One-Time Password) - Using authenticator apps like Google Authenticator, Authy
+- **Email OTP** - One-time passwords sent via email
+- **FIDO/WebAuthn** - Hardware security keys and platform authenticators
+- **Recovery Codes** - Backup codes for account recovery
+
+<Note>
+  Organizations can enforce 2FA for all users. When enforcement is enabled, users must configure at least one 2FA method before gaining full access.
+</Note>
+
+---
+
+## TOTP (Time-based One-Time Password)
+
+### Pre-enable TOTP
+
+<RequestExample>
+
+```bash cURL
+curl -X PUT https://zou.example.com/api/auth/totp \
+  -H "Authorization: Bearer <access_token>"
+```
+
+```python Python
+import requests
+
+response = requests.put(
+    "https://zou.example.com/api/auth/totp",
+    headers={"Authorization": f"Bearer {access_token}"}
+)
+
+data = response.json()
+provisioning_uri = data["totp_provisionning_uri"]
+otp_secret = data["otp_secret"]
+
+# Display QR code or secret to user for authenticator app
+```
+
+```javascript JavaScript
+const response = await fetch('https://zou.example.com/api/auth/totp', {
+  method: 'PUT',
+  headers: {
+    'Authorization': `Bearer ${accessToken}`
+  }
+});
+
+const data = await response.json();
+const provisioningUri = data.totp_provisionning_uri;
+const otpSecret = data.otp_secret;
+```
+
+</RequestExample>
+
+### PUT /api/auth/totp
+
+Prepare TOTP for enabling. Returns provisioning URI and secret for authenticator app setup.
+
+#### Headers
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token for authentication
+  
+  Format: `Bearer <access_token>`
+</ParamField>
+
+#### Response
+
+<ResponseField name="totp_provisionning_uri" type="string">
+  Provisioning URI for QR code generation (can be used with authenticator apps)
+  
+  Example: `otpauth://totp/Zou:user@example.com?secret=ABCD1234&issuer=Zou`
+</ResponseField>
+
+<ResponseField name="otp_secret" type="string">
+  TOTP secret key (can be manually entered in authenticator app)
+  
+  Example: `ABCD1234EFGH5678`
+</ResponseField>
+
+#### Status Codes
+
+- `200` - TOTP pre-enabled successfully
+- `400` - TOTP already enabled
+- `401` - Invalid or missing token
+
+---
+
+### Enable TOTP
+
+<RequestExample>
+
+```bash cURL
+curl -X POST https://zou.example.com/api/auth/totp \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "totp": "123456"
+  }'
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    "https://zou.example.com/api/auth/totp",
+    headers={"Authorization": f"Bearer {access_token}"},
+    json={"totp": "123456"}
+)
+
+data = response.json()
+recovery_codes = data["otp_recovery_codes"]
+# Store recovery codes securely and display to user
+```
+
+```javascript JavaScript
+const response = await fetch('https://zou.example.com/api/auth/totp', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${accessToken}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    totp: '123456'
+  })
+});
+
+const data = await response.json();
+const recoveryCodes = data.otp_recovery_codes;
+```
+
+</RequestExample>
+
+### POST /api/auth/totp
+
+Enable TOTP authentication. Requires verification code from authenticator app.
+
+#### Headers
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token for authentication
+  
+  Format: `Bearer <access_token>`
+</ParamField>
+
+#### Request Body
+
+<ParamField body="totp" type="string" required>
+  TOTP verification code from authenticator app
+  
+  Example: `123456`
+</ParamField>
+
+#### Response
+
+<ResponseField name="otp_recovery_codes" type="string[]">
+  Array of recovery codes for account recovery
+  
+  Example: `["ABCD-EFGH-IJKL-MNOP", "QRST-UVWX-YZ12-3456"]`
+</ResponseField>
+
+<ResponseField name="access_token" type="string">
+  New access token without 2FA setup restrictions
+</ResponseField>
+
+<ResponseField name="refresh_token" type="string">
+  New refresh token
+</ResponseField>
+
+#### Status Codes
+
+- `200` - TOTP enabled successfully
+- `400` - TOTP already enabled or verification failed
+- `401` - Invalid or missing token
+
+<Warning>
+  Store recovery codes securely and display them to the user. They are only shown once and are needed if the user loses access to their authenticator app.
+</Warning>
+
+---
+
+### Disable TOTP
+
+<RequestExample>
+
+```bash cURL
+curl -X DELETE https://zou.example.com/api/auth/totp \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "totp": "123456"
+  }'
+```
+
+```python Python
+import requests
+
+response = requests.delete(
+    "https://zou.example.com/api/auth/totp",
+    headers={"Authorization": f"Bearer {access_token}"},
+    json={"totp": "123456"}
+)
+```
+
+```javascript JavaScript
+const response = await fetch('https://zou.example.com/api/auth/totp', {
+  method: 'DELETE',
+  headers: {
+    'Authorization': `Bearer ${accessToken}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    totp: '123456'
+  })
+});
+```
+
+</RequestExample>
+
+### DELETE /api/auth/totp
+
+Disable TOTP authentication. Requires two-factor authentication verification.
+
+#### Headers
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token for authentication
+  
+  Format: `Bearer <access_token>`
+</ParamField>
+
+#### Request Body
+
+<ParamField body="totp" type="string">
+  TOTP verification code
+</ParamField>
+
+<ParamField body="email_otp" type="string">
+  Email OTP verification code
+</ParamField>
+
+<ParamField body="fido_authentication_response" type="object">
+  FIDO authentication response
+</ParamField>
+
+<ParamField body="recovery_code" type="string">
+  Recovery code for two-factor authentication
+</ParamField>
+
+<Note>
+  At least one 2FA method must be provided to disable TOTP.
+</Note>
+
+#### Response
+
+<ResponseField name="success" type="boolean">
+  Whether TOTP was disabled successfully
+</ResponseField>
+
+#### Status Codes
+
+- `200` - TOTP disabled successfully
+- `400` - TOTP not enabled or verification failed
+- `401` - Invalid or missing token
+
+---
+
+## Email OTP
+
+### Send Email OTP
+
+<RequestExample>
+
+```bash cURL
+curl -X GET "https://zou.example.com/api/auth/email-otp?email=user@example.com"
+```
+
+```python Python
+import requests
+
+response = requests.get(
+    "https://zou.example.com/api/auth/email-otp",
+    params={"email": "user@example.com"}
+)
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://zou.example.com/api/auth/email-otp?email=user@example.com'
+);
+```
+
+</RequestExample>
+
+### GET /api/auth/email-otp
+
+Send a one-time password by email to the user for authentication.
+
+#### Query Parameters
+
+<ParamField query="email" type="string" required>
+  User email address
+  
+  Example: `user@example.com`
+</ParamField>
+
+#### Response
+
+<ResponseField name="success" type="boolean">
+  Whether OTP was sent successfully
+</ResponseField>
+
+#### Status Codes
+
+- `200` - OTP sent successfully
+- `400` - OTP by email not enabled
+- `404` - User not found
+
+---
+
+### Pre-enable Email OTP
+
+<RequestExample>
+
+```bash cURL
+curl -X PUT https://zou.example.com/api/auth/email-otp \
+  -H "Authorization: Bearer <access_token>"
+```
+
+```python Python
+import requests
+
+response = requests.put(
+    "https://zou.example.com/api/auth/email-otp",
+    headers={"Authorization": f"Bearer {access_token}"}
+)
+
+# OTP will be sent to user's email
+```
+
+```javascript JavaScript
+const response = await fetch('https://zou.example.com/api/auth/email-otp', {
+  method: 'PUT',
+  headers: {
+    'Authorization': `Bearer ${accessToken}`
+  }
+});
+```
+
+</RequestExample>
+
+### PUT /api/auth/email-otp
+
+Prepare email OTP for enabling. An OTP code will be sent to the user's email address.
+
+#### Headers
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token for authentication
+  
+  Format: `Bearer <access_token>`
+</ParamField>
+
+#### Response
+
+<ResponseField name="success" type="boolean">
+  Whether email OTP pre-enable was successful
+</ResponseField>
+
+#### Status Codes
+
+- `200` - Email OTP pre-enabled, code sent
+- `400` - Email OTP already enabled
+- `401` - Invalid or missing token
+
+---
+
+### Enable Email OTP
+
+<RequestExample>
+
+```bash cURL
+curl -X POST https://zou.example.com/api/auth/email-otp \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email_otp": "123456"
+  }'
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    "https://zou.example.com/api/auth/email-otp",
+    headers={"Authorization": f"Bearer {access_token}"},
+    json={"email_otp": "123456"}
+)
+
+data = response.json()
+recovery_codes = data["otp_recovery_codes"]
+```
+
+```javascript JavaScript
+const response = await fetch('https://zou.example.com/api/auth/email-otp', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${accessToken}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    email_otp: '123456'
+  })
+});
+```
+
+</RequestExample>
+
+### POST /api/auth/email-otp
+
+Enable email OTP authentication. Requires verification code sent to email.
+
+#### Headers
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token for authentication
+  
+  Format: `Bearer <access_token>`
+</ParamField>
+
+#### Request Body
+
+<ParamField body="email_otp" type="string" required>
+  Email OTP verification code
+  
+  Example: `123456`
+</ParamField>
+
+#### Response
+
+<ResponseField name="otp_recovery_codes" type="string[]">
+  Array of recovery codes for account recovery
+</ResponseField>
+
+<ResponseField name="access_token" type="string">
+  New access token without 2FA setup restrictions
+</ResponseField>
+
+<ResponseField name="refresh_token" type="string">
+  New refresh token
+</ResponseField>
+
+#### Status Codes
+
+- `200` - Email OTP enabled successfully
+- `400` - Email OTP already enabled or verification failed
+- `401` - Invalid or missing token
+
+---
+
+### Disable Email OTP
+
+<RequestExample>
+
+```bash cURL
+curl -X DELETE https://zou.example.com/api/auth/email-otp \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email_otp": "123456"
+  }'
+```
+
+```python Python
+import requests
+
+response = requests.delete(
+    "https://zou.example.com/api/auth/email-otp",
+    headers={"Authorization": f"Bearer {access_token}"},
+    json={"email_otp": "123456"}
+)
+```
+
+```javascript JavaScript
+const response = await fetch('https://zou.example.com/api/auth/email-otp', {
+  method: 'DELETE',
+  headers: {
+    'Authorization': `Bearer ${accessToken}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    email_otp: '123456'
+  })
+});
+```
+
+</RequestExample>
+
+### DELETE /api/auth/email-otp
+
+Disable email OTP authentication. Requires two-factor authentication verification.
+
+#### Headers
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token for authentication
+  
+  Format: `Bearer <access_token>`
+</ParamField>
+
+#### Request Body
+
+<ParamField body="totp" type="string">
+  TOTP verification code
+</ParamField>
+
+<ParamField body="email_otp" type="string">
+  Email OTP verification code
+</ParamField>
+
+<ParamField body="fido_authentication_response" type="object">
+  FIDO authentication response
+</ParamField>
+
+<ParamField body="recovery_code" type="string">
+  Recovery code for two-factor authentication
+</ParamField>
+
+#### Response
+
+<ResponseField name="success" type="boolean">
+  Whether email OTP was disabled successfully
+</ResponseField>
+
+#### Status Codes
+
+- `200` - Email OTP disabled successfully
+- `400` - Email OTP not enabled or verification failed
+- `401` - Invalid or missing token
+
+---
+
+## FIDO/WebAuthn
+
+### Get FIDO Challenge
+
+<RequestExample>
+
+```bash cURL
+curl -X GET "https://zou.example.com/api/auth/fido?email=user@example.com"
+```
+
+```python Python
+import requests
+
+response = requests.get(
+    "https://zou.example.com/api/auth/fido",
+    params={"email": "user@example.com"}
+)
+
+challenge = response.json()
+# Use challenge with WebAuthn API
+```
+
+```javascript JavaScript
+// Get challenge for FIDO authentication
+const response = await fetch(
+  'https://zou.example.com/api/auth/fido?email=user@example.com'
+);
+const challenge = await response.json();
+
+// Use with WebAuthn API
+const credential = await navigator.credentials.get({
+  publicKey: challenge
+});
+```
+
+</RequestExample>
+
+### GET /api/auth/fido
+
+Get a challenge for FIDO device authentication. Used for WebAuthn authentication flow.
+
+#### Query Parameters
+
+<ParamField query="email" type="string" required>
+  User email address
+  
+  Example: `user@example.com`
+</ParamField>
+
+#### Response
+
+Returns WebAuthn challenge object for authentication.
+
+#### Status Codes
+
+- `200` - FIDO challenge generated
+- `400` - FIDO not enabled
+- `404` - User not found
+
+---
+
+### Pre-register FIDO Device
+
+<RequestExample>
+
+```bash cURL
+curl -X PUT https://zou.example.com/api/auth/fido \
+  -H "Authorization: Bearer <access_token>"
+```
+
+```python Python
+import requests
+
+response = requests.put(
+    "https://zou.example.com/api/auth/fido",
+    headers={"Authorization": f"Bearer {access_token}"}
+)
+
+registration_options = response.json()
+# Use with WebAuthn API for device registration
+```
+
+```javascript JavaScript
+// Get registration options
+const response = await fetch('https://zou.example.com/api/auth/fido', {
+  method: 'PUT',
+  headers: {
+    'Authorization': `Bearer ${accessToken}`
+  }
+});
+
+const registrationOptions = await response.json();
+
+// Register FIDO device with WebAuthn API
+const credential = await navigator.credentials.create({
+  publicKey: registrationOptions
+});
+```
+
+</RequestExample>
+
+### PUT /api/auth/fido
+
+Prepare FIDO device for registration. Returns registration options for WebAuthn.
+
+#### Headers
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token for authentication
+  
+  Format: `Bearer <access_token>`
+</ParamField>
+
+#### Response
+
+Returns WebAuthn registration options object.
+
+#### Status Codes
+
+- `200` - FIDO device pre-registered
+- `401` - Invalid or missing token
+
+---
+
+### Register FIDO Device
+
+<RequestExample>
+
+```bash cURL
+curl -X POST https://zou.example.com/api/auth/fido \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "registration_response": {...},
+    "device_name": "YubiKey 5"
+  }'
+```
+
+```python Python
+import requests
+
+# After getting credential from WebAuthn API
+response = requests.post(
+    "https://zou.example.com/api/auth/fido",
+    headers={"Authorization": f"Bearer {access_token}"},
+    json={
+        "registration_response": registration_response,
+        "device_name": "YubiKey 5"
+    }
+)
+
+data = response.json()
+recovery_codes = data["otp_recovery_codes"]
+```
+
+```javascript JavaScript
+// After creating credential with WebAuthn API
+const response = await fetch('https://zou.example.com/api/auth/fido', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${accessToken}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    registration_response: credential,
+    device_name: 'YubiKey 5'
+  })
+});
+```
+
+</RequestExample>
+
+### POST /api/auth/fido
+
+Register a FIDO device for WebAuthn authentication. Requires registration response from the device.
+
+#### Headers
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token for authentication
+  
+  Format: `Bearer <access_token>`
+</ParamField>
+
+#### Request Body
+
+<ParamField body="registration_response" type="object" required>
+  FIDO device registration response from WebAuthn API
+</ParamField>
+
+<ParamField body="device_name" type="string" required>
+  Name for the FIDO device
+  
+  Example: `YubiKey 5`, `Touch ID`, `Windows Hello`
+</ParamField>
+
+#### Response
+
+<ResponseField name="otp_recovery_codes" type="string[]">
+  Array of recovery codes for account recovery
+</ResponseField>
+
+<ResponseField name="access_token" type="string">
+  New access token without 2FA setup restrictions
+</ResponseField>
+
+<ResponseField name="refresh_token" type="string">
+  New refresh token
+</ResponseField>
+
+#### Status Codes
+
+- `200` - FIDO device registered successfully
+- `400` - Registration failed or no preregistration
+- `401` - Invalid or missing token
+
+---
+
+### Unregister FIDO Device
+
+<RequestExample>
+
+```bash cURL
+curl -X DELETE https://zou.example.com/api/auth/fido \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "device_name": "YubiKey 5"
+  }'
+```
+
+```python Python
+import requests
+
+response = requests.delete(
+    "https://zou.example.com/api/auth/fido",
+    headers={"Authorization": f"Bearer {access_token}"},
+    json={"device_name": "YubiKey 5"}
+)
+```
+
+```javascript JavaScript
+const response = await fetch('https://zou.example.com/api/auth/fido', {
+  method: 'DELETE',
+  headers: {
+    'Authorization': `Bearer ${accessToken}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    device_name: 'YubiKey 5'
+  })
+});
+```
+
+</RequestExample>
+
+### DELETE /api/auth/fido
+
+Unregister a FIDO device from WebAuthn authentication. The user must be authenticated.
+
+#### Headers
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token for authentication
+  
+  Format: `Bearer <access_token>`
+</ParamField>
+
+#### Request Body
+
+<ParamField body="device_name" type="string" required>
+  Name of the FIDO device to unregister
+</ParamField>
+
+#### Response
+
+<ResponseField name="success" type="boolean">
+  Whether device was unregistered successfully
+</ResponseField>
+
+#### Status Codes
+
+- `200` - FIDO device unregistered successfully
+- `400` - FIDO not enabled
+- `401` - Invalid or missing token
+
+---
+
+## Recovery Codes
+
+### Generate New Recovery Codes
+
+<RequestExample>
+
+```bash cURL
+curl -X PUT https://zou.example.com/api/auth/recovery-codes \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "totp": "123456"
+  }'
+```
+
+```python Python
+import requests
+
+response = requests.put(
+    "https://zou.example.com/api/auth/recovery-codes",
+    headers={"Authorization": f"Bearer {access_token}"},
+    json={"totp": "123456"}
+)
+
+data = response.json()
+new_recovery_codes = data["otp_recovery_codes"]
+# Store securely and display to user
+```
+
+```javascript JavaScript
+const response = await fetch('https://zou.example.com/api/auth/recovery-codes', {
+  method: 'PUT',
+  headers: {
+    'Authorization': `Bearer ${accessToken}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    totp: '123456'
+  })
+});
+
+const data = await response.json();
+const newRecoveryCodes = data.otp_recovery_codes;
+```
+
+</RequestExample>
+
+### PUT /api/auth/recovery-codes
+
+Generate new recovery codes for two-factor authentication. Requires two-factor authentication verification. Previous recovery codes will be invalidated.
+
+#### Headers
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token for authentication
+  
+  Format: `Bearer <access_token>`
+</ParamField>
+
+#### Request Body
+
+<ParamField body="totp" type="string">
+  TOTP verification code
+</ParamField>
+
+<ParamField body="email_otp" type="string">
+  Email OTP verification code
+</ParamField>
+
+<ParamField body="fido_authentication_response" type="object">
+  FIDO authentication response
+</ParamField>
+
+<ParamField body="recovery_code" type="string">
+  Recovery code for two-factor authentication
+</ParamField>
+
+<Note>
+  At least one 2FA method must be provided to generate new recovery codes.
+</Note>
+
+#### Response
+
+<ResponseField name="otp_recovery_codes" type="string[]">
+  Array of new recovery codes
+  
+  Example: `["ABCD-EFGH-IJKL-MNOP", "QRST-UVWX-YZ12-3456"]`
+</ResponseField>
+
+#### Status Codes
+
+- `200` - New recovery codes generated
+- `400` - No 2FA enabled or verification failed
+- `401` - Invalid or missing token
+
+<Warning>
+  All previous recovery codes will be invalidated when new codes are generated. Store the new codes securely.
+</Warning>
+
+---
+
+## 2FA Enforcement
+
+When 2FA enforcement is enabled (`ENFORCE_2FA` config), users must configure at least one 2FA method.
+
+### Enforcement Flow
+
+1. User logs in with email and password
+2. If 2FA is not configured, login succeeds but with restricted access
+3. Access token includes `requires_2fa_setup` claim
+4. User can only access 2FA setup endpoints
+5. After configuring 2FA, new tokens are issued without restrictions
+
+### Login Response with 2FA Required
+
+```json
+{
+  "login": true,
+  "user": {...},
+  "organisation": {...},
+  "access_token": "eyJ...",
+  "refresh_token": "eyJ...",
+  "two_factor_authentication_required": true
+}
+```
+
+The `two_factor_authentication_required` flag indicates that 2FA setup is required before gaining full access.
+
+### Completing 2FA Setup
+
+After configuring any 2FA method (TOTP, Email OTP, or FIDO), the API returns new tokens without restrictions:
+
+```json
+{
+  "otp_recovery_codes": ["ABCD-EFGH-IJKL-MNOP", ...],
+  "access_token": "eyJ...",  // New token without restrictions
+  "refresh_token": "eyJ..."  // New refresh token
+}
+```
+
+### Exemptions
+
+Certain users can be exempted from 2FA enforcement through server configuration. Contact your administrator for exemption policies.

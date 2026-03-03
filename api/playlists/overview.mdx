@@ -1,0 +1,367 @@
+---
+title: "Review Playlists"
+description: "Create and manage review playlists for shot and asset reviews in Zou"
+---
+
+## Overview
+
+The Playlists API enables creation and management of review playlists - curated collections of shots, sequences, episodes, or assets with their preview files. Playlists are essential for client reviews, director feedback sessions, and team screenings.
+
+## Key Concepts
+
+### Playlist Structure
+
+A playlist is a collection of entities (shots/assets) with associated preview files:
+
+```json
+{
+  "id": "playlist-uuid",
+  "name": "Week 12 Animation Review",
+  "project_id": "project-uuid",
+  "episode_id": "episode-uuid",
+  "task_type_id": "animation-uuid",
+  "for_client": true,
+  "for_entity": "shot",
+  "is_for_all": false,
+  "shots": [
+    {
+      "entity_id": "shot-uuid",
+      "preview_file_id": "preview-uuid"
+    }
+  ],
+  "build_jobs": [],
+  "created_at": "2023-01-01T12:00:00Z",
+  "updated_at": "2023-01-01T12:00:00Z"
+}
+```
+
+### Entity Types
+
+Playlists support multiple entity types:
+
+- **Shots**: Individual shots with sequence/episode hierarchy
+- **Sequences**: Full sequences with episode context
+- **Episodes**: Complete episodes
+- **Assets**: Characters, props, environments by asset type
+
+The `for_entity` field specifies the entity type (defaults to "shot").
+
+### Preview File Integration
+
+Each playlist entry can specify a `preview_file_id`:
+
+- Links to specific preview file revision
+- Includes file metadata: extension, dimensions, duration, status
+- Retrieves all available previews grouped by task type
+- Supports fallback to other task types if specified task has no preview
+
+### Scoping and Filtering
+
+**Project Scope:**
+All playlists belong to a project.
+
+**Episode Scope:**
+- Specific episode: `episode_id` set
+- Main pack: `episode_id` is null, `is_for_all` is false
+- All assets: `episode_id` is null, `is_for_all` is true
+
+**Task Type Filtering:**
+Filter playlists by `task_type_id` (e.g., Animation, Lighting, Compositing).
+
+**Client Visibility:**
+Set `for_client: true` to mark playlist for client review.
+
+## Playlist Building
+
+### Build Jobs
+
+Playlists can be compiled into downloadable formats:
+
+**Movie Build (MP4):**
+- Concatenates all preview movies into single MP4 file
+- Supports full quality or web-optimized encoding
+- Asynchronous job queue processing
+- Email notification when build completes
+
+**ZIP Archive:**
+- Packages all preview files (including sub-revisions) into ZIP
+- Preserves original file names and formats
+- Immediate download (no build job)
+
+### Build Process
+
+1. **Start Build Job**: Creates `BuildJob` with status "running"
+2. **Processing**: 
+   - Retrieves all preview files from file store
+   - Concatenates movies using FFmpeg (demuxer or filter mode)
+   - Stores result in file store
+3. **Completion**: Updates job status to "succeeded" or "failed"
+4. **Notification**: Sends email with download link
+
+**Build Job Structure:**
+```json
+{
+  "id": "job-uuid",
+  "status": "running",  // "running", "succeeded", "failed"
+  "job_type": "movie",
+  "playlist_id": "playlist-uuid",
+  "created_at": "2023-01-01T12:00:00Z"
+}
+```
+
+### Encoding Parameters
+
+Movie builds use project-level settings:
+
+- **Width/Height**: From `preview_files_service.get_preview_file_dimensions()`
+- **FPS**: From `preview_files_service.get_preview_file_fps()`
+- **Full Quality**: Optional parameter for high-quality builds
+
+### Remote Job Processing
+
+For distributed systems:
+
+- Configurable via `ENABLE_JOB_QUEUE_REMOTE`
+- Requires cloud storage backend (S3, Swift)
+- Dispatches to Nomad job queue
+- Compresses preview IDs for network transfer
+
+## Preview File Management
+
+### Retrieval and Revision Grouping
+
+The service provides sophisticated preview file handling:
+
+**Multi-revision Support:**
+Previews with the same revision number are grouped together:
+
+```json
+{
+  "id": "preview-uuid",
+  "revision": 3,
+  "extension": "mp4",
+  "previews": [
+    {"id": "preview-uuid-2", "revision": 3, "extension": "png"}
+  ]
+}
+```
+
+**Task Type Prioritization:**
+Previews are ordered by:
+1. Task type priority (descending)
+2. Task type name
+3. Revision number (descending)
+4. Preview position
+5. Creation date
+
+### Entity Preview Structure
+
+When retrieving playlist with previews:
+
+```json
+{
+  "shots": [
+    {
+      "id": "shot-uuid",
+      "name": "SH010",
+      "sequence_name": "SEQ01",
+      "preview_file_id": "current-preview-uuid",
+      "preview_file_extension": "mp4",
+      "preview_file_revision": 3,
+      "preview_file_width": 1920,
+      "preview_file_height": 1080,
+      "preview_file_duration": 5.5,
+      "preview_file_status": "ready",
+      "preview_file_annotations": [],
+      "preview_file_task_id": "task-uuid",
+      "preview_files": {
+        "animation-task-type-uuid": [
+          {/* grouped previews by revision */}
+        ],
+        "lighting-task-type-uuid": [
+          {/* grouped previews by revision */}
+        ]
+      }
+    }
+  ]
+}
+```
+
+## Temporary Playlists
+
+Generate playlists on-the-fly from task IDs:
+
+**Use Cases:**
+- Quick review of selected tasks
+- Ad-hoc screening without persisting playlist
+- Synchronization and preview generation
+
+**Features:**
+- Automatically determines entity type from tasks
+- Selects appropriate preview files by task type
+- Falls back to linked task types if no preview available
+- Optional sorting by episode/sequence/asset type
+
+**Entity Structure:**
+
+Depends on entity type:
+
+```python
+# Shots
+{
+  "id": shot_id,
+  "name": "SH010",
+  "sequence_id": seq_id,
+  "sequence_name": "SEQ01",
+  "preview_file_task_id": task_id
+}
+
+# Assets
+{
+  "id": asset_id,
+  "name": "Character_Hero",
+  "asset_type_id": type_id,
+  "asset_type_name": "Character",
+  "preview_file_task_id": task_id
+}
+
+# Episodes
+{
+  "id": episode_id,
+  "name": "EP01",
+  "preview_file_task_id": task_id
+}
+```
+
+## Playlist Operations
+
+### Adding Entities
+
+Atomically add entities to playlists:
+
+- Uses Redis distributed lock for concurrency safety
+- Prevents duplicate entries
+- Falls back to database locking if Redis unavailable
+- Emits `playlist:add_entity` event
+
+**Concurrency Handling:**
+```python
+with with_playlist_lock(playlist_id, timeout=30):
+    # Safe concurrent modification
+    playlist.shots.append({"entity_id": entity_id})
+```
+
+### Querying Playlists
+
+**Pagination:**
+- Page size: 20 playlists per page
+- Configurable sort order (default: `updated_at`)
+
+**Filtering:**
+- By project
+- By episode (including "main" and "all" special values)
+- By task type
+- Client visibility (`for_client` flag)
+
+## Client Notifications
+
+Notify clients when playlists are ready:
+
+```python
+notifications_service.notify_clients_playlist_ready(
+    playlist,
+    studio_id=None,      # Optional: target specific studio
+    department_id=None   # Optional: target specific department
+)
+```
+
+- Creates notifications for client users
+- Filters by studio/department if specified
+- Sends to all project team members with client role
+
+## File Storage
+
+### Storage Backends
+
+**Local Storage:**
+- Files stored in `config.TMP_DIR`
+- Direct file path access
+
+**Cloud Storage (S3/Swift):**
+- Files cached locally in `TMP_DIR`
+- Retrieved on-demand from cloud backend
+- Cached for subsequent requests
+
+### File Naming
+
+**Movie Builds:**
+```
+{timestamp}_{project_name}_{episode_name}_{playlist_name}.mp4
+```
+
+**ZIP Archives:**
+```
+{project_name}_{episode_name}_{playlist_name}.zip
+```
+
+**Temporary Cache:**
+```
+cache-playlists-{build_job_id}.mp4
+cache-previews-{preview_file_id}.{extension}
+```
+
+## Permissions
+
+### Viewing Playlists
+- Project access required
+- Vendors blocked from playlist access
+- Client users see only `for_client` playlists
+
+### Managing Playlists
+- Creating/editing: Manager project access
+- Adding entities: Manager project access
+- Building movies: Manager project access
+- Deleting build jobs: Playlist access
+
+### Downloading
+- ZIP/Movie downloads: Supervisor project access + playlist access
+- Build job status: Standard playlist access
+
+## Events
+
+Playlist operations emit events:
+
+- `playlist:add_entity` - Entity added to playlist
+- `playlist:delete` - Playlist removed
+- `build-job:new` - Build job started
+- `build-job:update` - Build job completed/failed
+- `build-job:delete` - Build job removed
+
+## Best Practices
+
+1. **Use task type filtering**: Filter playlists by department for focused reviews
+2. **Set for_client flag**: Clearly mark client-facing playlists
+3. **Organize by episode**: Use episode scoping for TV show projects
+4. **Monitor build jobs**: Check job status before attempting download
+5. **Clean up old builds**: Remove completed build jobs to save storage
+6. **Use temp playlists**: For quick reviews, use temporary playlists instead of persisting
+7. **Enable job queue**: Use async processing for large playlists to avoid timeouts
+8. **Notify clients**: Use notification API when playlist is ready for review
+
+## Related Endpoints
+
+See the [Comments & Playlists Endpoints](/api/playlists/endpoints) for full API reference.
+
+## Service Functions
+
+Key functions in `playlists_service.py`:
+
+- `all_playlists_for_project()` - Paginated playlist list
+- `get_playlist_with_preview_file_revisions()` - Full playlist with preview data
+- `add_entity_to_playlist()` - Atomically add entity with locking
+- `build_playlist_movie_file()` - Concatenate previews into MP4
+- `build_playlist_zip_file()` - Package previews into ZIP
+- `generate_temp_playlist()` - Create temporary playlist from task IDs
+- `start_build_job()` / `end_build_job()` - Manage build lifecycle
+- `get_preview_files_for_entity()` - Retrieve all previews for entity
+- `set_preview_files_for_entities()` - Augment entities with preview data

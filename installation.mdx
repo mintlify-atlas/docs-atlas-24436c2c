@@ -1,0 +1,395 @@
+---
+title: Installation
+description: Install and configure Zou with PostgreSQL, Redis, and Python dependencies
+---
+
+# Installing Zou
+
+This guide walks you through setting up a Zou instance from scratch. You'll install the required dependencies, configure the database, and prepare the API for first use.
+
+## Prerequisites
+
+<Steps>
+  <Step title="Python 3.10 or higher">
+    Zou supports Python 3.10 through 3.14. Verify your Python version:
+    
+    ```bash
+    python3 --version
+    ```
+    
+    If you need to install Python, visit [python.org](https://www.python.org/downloads/).
+  </Step>
+  
+  <Step title="PostgreSQL 12 or higher">
+    Zou requires PostgreSQL as its primary database. Install PostgreSQL for your platform:
+    
+    <CodeGroup>
+    ```bash Ubuntu/Debian
+    sudo apt update
+    sudo apt install postgresql postgresql-contrib
+    ```
+    
+    ```bash macOS (Homebrew)
+    brew install postgresql@18
+    brew services start postgresql@18
+    ```
+    
+    ```bash Windows
+    # Download installer from:
+    # https://www.postgresql.org/download/windows/
+    ```
+    </CodeGroup>
+    
+    Verify PostgreSQL is running:
+    
+    ```bash
+    psql --version
+    ```
+  </Step>
+  
+  <Step title="Redis (Optional but Recommended)">
+    Redis is used for caching and token management. While optional for development, it's required for production.
+    
+    <CodeGroup>
+    ```bash Ubuntu/Debian
+    sudo apt install redis-server
+    sudo systemctl start redis-server
+    ```
+    
+    ```bash macOS (Homebrew)
+    brew install redis
+    brew services start redis
+    ```
+    
+    ```bash Windows
+    # Download from:
+    # https://github.com/microsoftarchive/redis/releases
+    ```
+    </CodeGroup>
+    
+    Test Redis connection:
+    
+    ```bash
+    redis-cli ping
+    # Should return: PONG
+    ```
+  </Step>
+</Steps>
+
+## Database Setup
+
+<Steps>
+  <Step title="Create PostgreSQL Database">
+    Connect to PostgreSQL and create the Zou database:
+    
+    ```bash
+    # Switch to postgres user (Linux)
+    sudo -u postgres psql
+    
+    # Or connect directly (macOS/Windows)
+    psql -U postgres
+    ```
+    
+    Then create the database:
+    
+    ```sql
+    CREATE DATABASE zoudb;
+    CREATE USER zouuser WITH ENCRYPTED PASSWORD 'mysecretpassword';
+    GRANT ALL PRIVILEGES ON DATABASE zoudb TO zouuser;
+    \q
+    ```
+    
+    <Note>
+      Choose a strong password for production deployments and store it securely.
+    </Note>
+  </Step>
+  
+  <Step title="Configure Database Connection">
+    Zou uses environment variables for configuration. Set these before running the application:
+    
+    ```bash
+    export DB_HOST=localhost
+    export DB_PORT=5432
+    export DB_USERNAME=zouuser
+    export DB_PASSWORD=mysecretpassword
+    export DB_DATABASE=zoudb
+    export DB_DRIVER=postgresql+psycopg
+    ```
+    
+    <Info>
+      For persistent configuration, add these to your shell profile (`~/.bashrc`, `~/.zshrc`) or use a `.env` file with a process manager.
+    </Info>
+  </Step>
+</Steps>
+
+## Install Zou
+
+<Steps>
+  <Step title="Install via pip">
+    Install Zou from PyPI:
+    
+    ```bash
+    pip install zou
+    ```
+    
+    This will install Zou and all its dependencies listed in `setup.cfg`:
+    - Flask and extensions (Flask-JWT-Extended, Flask-SQLAlchemy, etc.)
+    - Database drivers (psycopg 3.x)
+    - Background job processing (RQ, Redis)
+    - Media processing (ffmpeg-python, Pillow, OpenCV)
+    - And many more production-ready libraries
+    
+    <Note>
+      Zou has over 50 dependencies. Installation may take a few minutes.
+    </Note>
+  </Step>
+  
+  <Step title="Verify Installation">
+    Check that Zou was installed correctly:
+    
+    ```bash
+    zou version
+    ```
+    
+    You should see output like:
+    
+    ```
+    Zou version: 1.0.15
+    ```
+  </Step>
+</Steps>
+
+## Environment Configuration
+
+Zou is configured entirely through environment variables. Here are the essential settings:
+
+### Required Settings
+
+```bash
+# Database Configuration
+export DB_HOST=localhost
+export DB_PORT=5432
+export DB_USERNAME=zouuser
+export DB_PASSWORD=mysecretpassword
+export DB_DATABASE=zoudb
+
+# Security
+export SECRET_KEY="your-secret-key-here-min-32-chars"
+
+# Redis (Key-Value Store)
+export KV_HOST=localhost
+export KV_PORT=6379
+```
+
+### Optional Settings
+
+<CodeGroup>
+```bash Development
+# Enable debug mode
+export DEBUG=true
+export DEBUG_HOST=127.0.0.1
+export DEBUG_PORT=5000
+
+# Mail (disabled for dev)
+export MAIL_ENABLED=false
+```
+
+```bash Production
+# Production settings
+export DEBUG=false
+
+# Domain configuration
+export DOMAIN_NAME=zou.yourstudio.com
+export DOMAIN_PROTOCOL=https
+
+# Database pool settings
+export DB_POOL_SIZE=30
+export DB_MAX_OVERFLOW=60
+
+# Email configuration
+export MAIL_ENABLED=true
+export MAIL_SERVER=smtp.yourstudio.com
+export MAIL_PORT=587
+export MAIL_USE_TLS=true
+export MAIL_USERNAME=zou@yourstudio.com
+export MAIL_PASSWORD=mailpassword
+export MAIL_DEFAULT_SENDER=zou@yourstudio.com
+
+# File storage
+export PREVIEW_FOLDER=/var/zou/previews
+
+# Event streaming
+export EVENT_STREAM_HOST=0.0.0.0
+export EVENT_STREAM_PORT=5001
+```
+</CodeGroup>
+
+<Info>
+For a complete list of configuration options, see the `zou/app/config.py` file in the source code.
+</Info>
+
+## Initialize the Database
+
+<Steps>
+  <Step title="Run Database Migrations">
+    Initialize the database schema:
+    
+    ```bash
+    zou init-db
+    ```
+    
+    Output:
+    ```
+    Creating database and tables...
+    Database and tables created.
+    ```
+    
+    This command runs all Flask-Migrate migrations to create the required tables.
+  </Step>
+  
+  <Step title="Initialize Default Data">
+    Populate the database with essential data (task statuses, file statuses, etc.):
+    
+    ```bash
+    zou init-data
+    ```
+    
+    This creates:
+    - Default task statuses (Todo, Work In Progress, Done, etc.)
+    - Default file statuses
+    - Default project settings
+    - System metadata descriptors
+  </Step>
+  
+  <Step title="Create Admin User">
+    Create your first admin user:
+    
+    ```bash
+    zou create-admin admin@example.com --password YourSecurePassword123
+    ```
+    
+    Output:
+    ```
+    Admin successfully created.
+    ```
+    
+    <Warning>
+      Use a strong password for the admin account. This user has full access to all production data.
+    </Warning>
+  </Step>
+  
+  <Step title="Verify Database Status">
+    Check that the database is ready:
+    
+    ```bash
+    zou is-db-ready
+    ```
+    
+    Output:
+    ```
+    Database is initialized.
+    ```
+  </Step>
+</Steps>
+
+## Additional Dependencies
+
+### FFmpeg (Required for Preview Processing)
+
+Zou uses FFmpeg to process video previews and generate thumbnails.
+
+<CodeGroup>
+```bash Ubuntu/Debian
+sudo apt update
+sudo apt install ffmpeg
+```
+
+```bash macOS (Homebrew)
+brew install ffmpeg
+```
+
+```bash Windows
+# Download from: https://ffmpeg.org/download.html
+# Add ffmpeg.exe to your PATH
+```
+</CodeGroup>
+
+Verify FFmpeg installation:
+
+```bash
+ffmpeg -version
+```
+
+### Meilisearch (Optional - Search Indexing)
+
+For full-text search capabilities, install Meilisearch:
+
+```bash
+# Download and run Meilisearch
+curl -L https://install.meilisearch.com | sh
+./meilisearch --master-key=your_master_key
+```
+
+Configure Zou to use it:
+
+```bash
+export INDEXER_HOST=localhost
+export INDEXER_PORT=7700
+export INDEXER_KEY=your_master_key
+```
+
+## Upgrading Zou
+
+To upgrade an existing Zou installation:
+
+<Steps>
+  <Step title="Update the Package">
+    ```bash
+    pip install --upgrade zou
+    ```
+  </Step>
+  
+  <Step title="Run Database Migrations">
+    ```bash
+    zou upgrade-db
+    ```
+    
+    This applies any new database schema changes.
+  </Step>
+  
+  <Step title="Restart Services">
+    Restart your Zou server and any background workers.
+  </Step>
+</Steps>
+
+## Common Configuration Examples
+
+### Using a .env File
+
+Create a `.env` file for your configuration:
+
+```bash
+# .env
+DB_HOST=localhost
+DB_USERNAME=zouuser
+DB_PASSWORD=mysecretpassword
+DB_DATABASE=zoudb
+SECRET_KEY=your-secret-key-at-least-32-characters-long
+KV_HOST=localhost
+KV_PORT=6379
+DEBUG=false
+```
+
+Load it before starting Zou:
+
+```bash
+set -a && source .env && set +a
+```
+
+### Docker Compose
+
+For containerized deployments, see the [CGWire Docker setup](https://github.com/cgwire/docker) repository.
+
+## Next Steps
+
+Now that Zou is installed and configured, proceed to the [Quick Start](/quickstart) guide to run the server and make your first API request.

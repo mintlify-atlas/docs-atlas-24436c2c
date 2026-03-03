@@ -1,0 +1,407 @@
+---
+title: "Asset Types"
+description: "Manage asset type categories for organizing production assets"
+---
+
+## Overview
+
+Asset Types are categories used to classify and organize production assets. They define the different kinds of reusable elements in your production pipeline, such as Characters, Props, Environments, and more.
+
+## What are Asset Types?
+
+Asset Types (also called Entity Types for assets) help you:
+
+- **Organize assets** into logical categories
+- **Configure pipelines** with type-specific task types
+- **Filter and search** assets efficiently
+- **Apply bulk operations** to similar assets
+- **Generate reports** grouped by asset category
+
+<Note>
+  Asset Types are distinct from temporal entity types (Shot, Sequence, Episode, Scene, Edit, Concept). The API automatically filters to show only asset types.
+</Note>
+
+## Standard Asset Types
+
+While you can create custom asset types, here are common categories used in animation and VFX:
+
+<CardGroup cols={3}>
+  <Card title="Character" icon="user">
+    Animated characters (main, supporting, background)
+  </Card>
+  <Card title="Prop" icon="cube">
+    Objects that characters interact with
+  </Card>
+  <Card title="Environment" icon="mountain">
+    Sets, locations, and backgrounds
+  </Card>
+  <Card title="Vehicle" icon="car">
+    Cars, ships, aircraft, spacecraft
+  </Card>
+  <Card title="FX" icon="wand-magic-sparkles">
+    Effects elements (fire, water, explosions)
+  </Card>
+  <Card title="Camera" icon="camera">
+    Virtual camera rigs
+  </Card>
+</CardGroup>
+
+## Asset Type Model
+
+<ResponseField name="id" type="string" required>
+  Unique identifier (UUID format)
+  
+  ```json
+  "c46c8gc6-eg97-6887-c292-79675204e47"
+  ```
+</ResponseField>
+
+<ResponseField name="name" type="string" required>
+  Asset type name
+  
+  ```json
+  "Character"
+  ```
+</ResponseField>
+
+<ResponseField name="short_name" type="string">
+  Abbreviated name for UI display
+  
+  ```json
+  "CHAR"
+  ```
+</ResponseField>
+
+<ResponseField name="description" type="string">
+  Detailed description of the asset type
+  
+  ```json
+  "Animated characters including main cast and background performers"
+  ```
+</ResponseField>
+
+<ResponseField name="task_types" type="array">
+  Array of task type IDs associated with this asset type. Defines the default production pipeline.
+  
+  ```json
+  [
+    "f79f1jf9-hj20-9110-f625-02908537h70",  // Modeling
+    "g80g2kg0-ik31-0221-g736-13019648i81"   // Texturing
+  ]
+  ```
+</ResponseField>
+
+<ResponseField name="archived" type="boolean">
+  Whether the asset type is archived and hidden from active use
+  
+  ```json
+  false
+  ```
+</ResponseField>
+
+<ResponseField name="created_at" type="string">
+  Creation timestamp (ISO 8601 format)
+  
+  ```json
+  "2023-01-15T10:30:00Z"
+  ```
+</ResponseField>
+
+<ResponseField name="updated_at" type="string">
+  Last update timestamp (ISO 8601 format)
+  
+  ```json
+  "2023-06-20T14:45:00Z"
+  ```
+</ResponseField>
+
+## Managing Asset Types
+
+### Get All Asset Types
+
+Retrieve all asset types in the system:
+
+```http
+GET /api/data/asset-types
+```
+
+**Example Response:**
+
+```json
+[
+  {
+    "id": "c46c8gc6-eg97-6887-c292-79675204e47",
+    "name": "Character",
+    "short_name": "CHAR",
+    "description": "Animated characters",
+    "task_types": [
+      "f79f1jf9-hj20-9110-f625-02908537h70",
+      "g80g2kg0-ik31-0221-g736-13019648i81"
+    ],
+    "archived": false,
+    "created_at": "2023-01-15T10:30:00Z",
+    "updated_at": "2023-06-20T14:45:00Z"
+  },
+  {
+    "id": "d57d9hd7-fh08-7998-d403-80786315f58",
+    "name": "Prop",
+    "short_name": "PROP",
+    "description": "Props and objects",
+    "task_types": [
+      "f79f1jf9-hj20-9110-f625-02908537h70"
+    ],
+    "archived": false,
+    "created_at": "2023-01-15T10:31:00Z",
+    "updated_at": "2023-01-15T10:31:00Z"
+  }
+]
+```
+
+### Get Single Asset Type
+
+Retrieve a specific asset type by ID:
+
+```http
+GET /api/data/asset-types/{asset_type_id}
+```
+
+**Example Response:**
+
+```json
+{
+  "id": "c46c8gc6-eg97-6887-c292-79675204e47",
+  "name": "Character",
+  "short_name": "CHAR",
+  "description": "Animated characters including main cast",
+  "task_types": [
+    "f79f1jf9-hj20-9110-f625-02908537h70",
+    "g80g2kg0-ik31-0221-g736-13019648i81",
+    "h91h3lh1-jl42-1332-h847-24120759j92"
+  ],
+  "archived": false,
+  "created_at": "2023-01-15T10:30:00Z",
+  "updated_at": "2023-06-20T14:45:00Z"
+}
+```
+
+### Get Asset Types for Project
+
+Retrieve only the asset types that are actually used in a specific project:
+
+```http
+GET /api/data/projects/{project_id}/asset-types
+```
+
+This returns only asset types that have at least one asset in the project.
+
+**Example Response:**
+
+```json
+[
+  {
+    "id": "c46c8gc6-eg97-6887-c292-79675204e47",
+    "name": "Character",
+    "short_name": "CHAR"
+  },
+  {
+    "id": "d57d9hd7-fh08-7998-d403-80786315f58",
+    "name": "Environment",
+    "short_name": "ENV"
+  }
+]
+```
+
+### Get Asset Types for Shot
+
+Retrieve asset types of assets that are cast in a specific shot:
+
+```http
+GET /api/data/shots/{shot_id}/asset-types
+```
+
+Useful for understanding what types of assets appear in a shot.
+
+**Example Response:**
+
+```json
+[
+  {
+    "id": "c46c8gc6-eg97-6887-c292-79675204e47",
+    "name": "Character",
+    "short_name": "CHAR"
+  },
+  {
+    "id": "d57d9hd7-fh08-7998-d403-80786315f58",
+    "name": "Prop",
+    "short_name": "PROP"
+  }
+]
+```
+
+## Task Type Associations
+
+Asset Types can be associated with specific Task Types to define the production pipeline for that category of assets.
+
+### Example Pipeline Configurations
+
+**Character Pipeline:**
+- Concept
+- Modeling
+- Texturing
+- Rigging
+- Grooming
+- Lookdev
+
+**Prop Pipeline:**
+- Concept
+- Modeling
+- Texturing
+- Lookdev
+
+**Environment Pipeline:**
+- Concept
+- Layout
+- Modeling
+- Texturing
+- Lighting Setup
+
+## Creating Asset Types
+
+Asset types are typically created through:
+
+1. **Initial setup**: When setting up a new production
+2. **Import**: From project templates or CSV import
+3. **Auto-creation**: The `get_or_create_asset_type()` service method
+
+<Warning>
+  Asset Type creation is usually done through the admin interface or import tools rather than direct API calls. The API focuses on reading and using existing asset types.
+</Warning>
+
+## Filtering Assets by Type
+
+Once you have asset types, you can filter assets:
+
+```http
+GET /api/data/projects/{project_id}/asset-types/{asset_type_id}/assets
+```
+
+This retrieves all assets of a specific type within a project.
+
+**Example Response:**
+
+```json
+[
+  {
+    "id": "a24a6ea4-ce75-4665-a070-57453082c25",
+    "name": "Hero Character",
+    "project_id": "b35b7fb5-df86-5776-b181-68564193d36",
+    "entity_type_id": "c46c8gc6-eg97-6887-c292-79675204e47",
+    "asset_type_name": "Character",
+    "description": "Main protagonist",
+    "preview_file_id": "e68e0ie8-gi19-8009-e514-91897426g69"
+  },
+  {
+    "id": "f79f1jf9-hj20-9110-f625-02908537h70",
+    "name": "Villain Character",
+    "project_id": "b35b7fb5-df86-5776-b181-68564193d36",
+    "entity_type_id": "c46c8gc6-eg97-6887-c292-79675204e47",
+    "asset_type_name": "Character",
+    "description": "Main antagonist",
+    "preview_file_id": "g80g2kg0-ik31-0221-g736-13019648i81"
+  }
+]
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Keep it simple" icon="circle-check">
+    Start with 4-6 basic asset types (Character, Prop, Environment, Vehicle, FX). Add more only when needed.
+  </Accordion>
+  
+  <Accordion title="Use consistent naming" icon="spell-check">
+    Use clear, standardized names across projects. Avoid abbreviations in the main name field.
+  </Accordion>
+  
+  <Accordion title="Configure task types" icon="list-check">
+    Associate relevant task types with each asset type to streamline pipeline creation.
+  </Accordion>
+  
+  <Accordion title="Don't over-categorize" icon="triangle-exclamation">
+    Avoid creating too many specific asset types. Use asset metadata (data field) for detailed categorization instead.
+  </Accordion>
+  
+  <Accordion title="Archive instead of delete" icon="box-archive">
+    Use the archived flag rather than deleting asset types to preserve historical data.
+  </Accordion>
+</AccordionGroup>
+
+## Integration Examples
+
+### Python: Get Character Assets
+
+```python
+import requests
+
+# Get the Character asset type ID
+response = requests.get(
+    "https://kitsu.example.com/api/data/asset-types",
+    headers={"Authorization": f"Bearer {token}"}
+)
+asset_types = response.json()
+character_type = next(at for at in asset_types if at["name"] == "Character")
+
+# Get all character assets in project
+response = requests.get(
+    f"https://kitsu.example.com/api/data/projects/{project_id}/asset-types/{character_type['id']}/assets",
+    headers={"Authorization": f"Bearer {token}"}
+)
+characters = response.json()
+
+print(f"Found {len(characters)} character assets")
+```
+
+### JavaScript: Filter by Asset Type
+
+```javascript
+const getAssetsByType = async (projectId, typeName) => {
+  // Get asset types
+  const typesResponse = await fetch(
+    `https://kitsu.example.com/api/data/projects/${projectId}/asset-types`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  const assetTypes = await typesResponse.json();
+  
+  // Find the type
+  const assetType = assetTypes.find(at => at.name === typeName);
+  if (!assetType) return [];
+  
+  // Get assets of that type
+  const assetsResponse = await fetch(
+    `https://kitsu.example.com/api/data/projects/${projectId}/asset-types/${assetType.id}/assets`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  
+  return assetsResponse.json();
+};
+
+const props = await getAssetsByType(projectId, "Prop");
+console.log(`Found ${props.length} props`);
+```
+
+## Related Resources
+
+<CardGroup cols={2}>
+  <Card title="Assets Overview" icon="box" href="./overview">
+    Learn about the asset system
+  </Card>
+  <Card title="API Endpoints" icon="code" href="./endpoints">
+    Complete endpoint reference
+  </Card>
+  <Card title="Task Types" icon="list-check" href="../tasks/task-types">
+    Configure production task types
+  </Card>
+  <Card title="Projects" icon="folder" href="../projects/overview">
+    Project management
+  </Card>
+</CardGroup>

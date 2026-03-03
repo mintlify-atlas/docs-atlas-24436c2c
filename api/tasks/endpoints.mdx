@@ -1,0 +1,785 @@
+---
+title: Task API Endpoints
+description: Complete reference for all task-related API endpoints
+---
+
+## Overview
+
+This page provides a complete reference for all task-related endpoints in the Zou API. Tasks are organized into several categories: task queries, task creation, assignments, time tracking, comments, previews, and bulk operations.
+
+## Task Queries
+
+### Get Full Task Details
+
+```
+GET /api/data/tasks/{task_id}/full
+```
+
+Returns a task with complete relationship information including assignees, task type, task status, entity, entity type, project, sequence, and episode.
+
+**Response:**
+```json
+{
+  "id": "a24a6ea4-ce75-4665-a070-57453082c25",
+  "name": "main",
+  "project": {...},
+  "task_type": {...},
+  "task_status": {...},
+  "entity": {...},
+  "entity_type": {...},
+  "sequence": {...},
+  "episode": {...},
+  "persons": [...],
+  "assigner": {...},
+  "is_subscribed": true
+}
+```
+
+### Get Tasks for Entity and Type
+
+```
+GET /api/data/entities/{entity_id}/task-types/{task_type_id}/tasks
+```
+
+Returns all tasks for a specific entity and task type combination.
+
+**Response:**
+```json
+[
+  {
+    "id": "task-uuid",
+    "name": "main",
+    "entity_id": "entity-uuid",
+    "task_type_id": "type-uuid"
+  }
+]
+```
+
+### Get Open Tasks
+
+```
+GET /api/data/tasks/open-tasks
+```
+
+Returns tasks from open projects with filtering, pagination, and statistics.
+
+**Query Parameters:**
+- `project_id` (uuid): Filter by project
+- `task_type_id` (uuid): Filter by task type
+- `task_status_id` (uuid): Filter by status
+- `person_id` (uuid | "unassigned"): Filter by assignee
+- `studio_id` (uuid): Filter by studio
+- `department_id` (uuid): Filter by department
+- `start_date` (date): Tasks starting after this date
+- `due_date` (date): Tasks due before this date
+- `priority` (integer): Filter by task type priority
+- `page` (integer): Page number (default: 1)
+- `limit` (integer): Results per page (default: 100)
+
+**Response:**
+```json
+{
+  "data": [
+    {
+      "id": "task-uuid",
+      "name": "main",
+      "project_name": "Project Name",
+      "entity_name": "SH010",
+      "type_name": "Animation",
+      "status_name": "WIP"
+    }
+  ],
+  "stats": {
+    "total": 150,
+    "total_duration": 12000,
+    "total_estimation": 15000,
+    "status": [
+      {"task_status_id": "status-uuid", "amount": 50}
+    ]
+  },
+  "limit": 100,
+  "page": 1,
+  "is_more": true
+}
+```
+
+### Get Open Tasks Stats
+
+```
+GET /api/data/tasks/open-tasks/stats
+```
+
+Returns aggregated statistics by project, task type, and status for open projects.
+
+**Response:**
+```json
+{
+  "project-uuid": {
+    "amount": 200,
+    "amount_done": 150,
+    "total_duration": 24000,
+    "total_estimation": 30000,
+    "task_types": [
+      {
+        "task_type_id": "type-uuid",
+        "task_status_id": "status-uuid",
+        "project_id": "project-uuid",
+        "amount": 50,
+        "amount_done": 35,
+        "total_duration": 6000,
+        "total_estimation": 7500
+      }
+    ]
+  }
+}
+```
+
+## Person Tasks
+
+### Get Person's Open Tasks
+
+```
+GET /api/data/persons/{person_id}/tasks
+```
+
+Returns all non-done tasks assigned to a person in open projects.
+
+**Response:**
+```json
+[
+  {
+    "id": "task-uuid",
+    "name": "main",
+    "project_name": "Project",
+    "entity_name": "SH010",
+    "task_type_name": "Animation",
+    "task_status_name": "WIP",
+    "last_comment": {...}
+  }
+]
+```
+
+### Get Person's Done Tasks
+
+```
+GET /api/data/persons/{person_id}/done-tasks
+```
+
+Returns completed tasks assigned to a person in open projects.
+
+### Get Person's Related Tasks
+
+```
+GET /api/data/persons/{person_id}/related-tasks/{task_type_id}
+```
+
+For all entities assigned to a person, returns tasks of the given task type.
+
+### Get Persons Tasks Date Ranges
+
+```
+GET /api/data/persons/task-dates
+```
+
+Returns first start date and last end date for each active person's tasks.
+
+**Query Parameters:**
+- `project_id` (uuid, optional): Filter by project
+
+**Response:**
+```json
+[
+  {
+    "person_id": "person-uuid",
+    "min_date": "2024-01-15",
+    "max_date": "2024-03-21"
+  }
+]
+```
+
+## Project Tasks
+
+### Get Project Tasks
+
+```
+GET /api/data/projects/{project_id}/tasks
+```
+
+Returns all tasks for a project with pagination.
+
+**Query Parameters:**
+- `page` (integer): Page number
+- `task_type_id` (uuid): Filter by task type
+- `episode_id` (uuid): Filter by episode
+
+**Response:**
+```json
+{
+  "data": [...],
+  "limit": 100,
+  "page": 1,
+  "is_more": false
+}
+```
+
+### Get Project Comments
+
+```
+GET /api/data/projects/{project_id}/comments
+```
+
+Returns all comments on tasks in the project.
+
+**Query Parameters:**
+- `page` (integer): Page number
+- `limit` (integer): Results per page (default: 100)
+
+### Get Project Preview Files
+
+```
+GET /api/data/projects/{project_id}/preview-files
+```
+
+Returns all preview files for tasks in the project. Requires admin permissions.
+
+**Query Parameters:**
+- `page` (integer): Page number
+
+### Get Project Notifications
+
+```
+GET /api/data/projects/{project_id}/notifications
+```
+
+Returns all notifications for tasks in the project. Requires admin permissions.
+
+**Query Parameters:**
+- `page` (integer): Page number
+
+### Get Project Subscriptions
+
+```
+GET /api/data/projects/{project_id}/subscriptions
+```
+
+Returns all task subscriptions for the project. Requires admin permissions.
+
+## Task Creation
+
+### Create Shot Tasks
+
+```
+POST /api/actions/projects/{project_id}/task-types/{task_type_id}/shots/create-tasks
+```
+
+Creates tasks for shots in a project.
+
+**Request Body:**
+```json
+[
+  "shot-uuid-1",
+  "shot-uuid-2"
+]
+```
+
+Or empty array `[]` to create tasks for all shots in the project.
+
+**Response:**
+```json
+[
+  {
+    "id": "task-uuid",
+    "name": "main",
+    "entity_id": "shot-uuid",
+    "task_type_id": "type-uuid",
+    "task_status_id": "status-uuid"
+  }
+]
+```
+
+### Create Asset Tasks
+
+```
+POST /api/actions/projects/{project_id}/task-types/{task_type_id}/assets/create-tasks
+```
+
+Creates tasks for assets. Same request/response format as shot tasks.
+
+### Create Edit Tasks
+
+```
+POST /api/actions/projects/{project_id}/task-types/{task_type_id}/edits/create-tasks
+```
+
+Creates tasks for edits. Same request/response format as shot tasks.
+
+### Create Concept Tasks
+
+```
+POST /api/actions/projects/{project_id}/task-types/{task_type_id}/concepts/create-tasks
+```
+
+Creates tasks for concepts. Same request/response format as shot tasks.
+
+### Create Generic Entity Tasks
+
+```
+POST /api/actions/projects/{project_id}/task-types/{task_type_id}/create-tasks/{entity_type}/
+```
+
+Creates tasks for any entity type. Replace `{entity_type}` with: Asset, Shot, Sequence, Episode, Scene, Edit, or Concept.
+
+## Task Assignments
+
+### Assign Task to Person
+
+```
+PUT /api/actions/tasks/{task_id}/assign
+```
+
+Assigns a single task to a person.
+
+**Request Body:**
+```json
+{
+  "person_id": "person-uuid"
+}
+```
+
+**Response:**
+```json
+{
+  "id": "task-uuid",
+  "assignees": ["person-uuid"],
+  "assigner_id": "current-user-uuid"
+}
+```
+
+### Assign Multiple Tasks to Person
+
+```
+PUT /api/actions/persons/{person_id}/assign
+```
+
+Assigns multiple tasks to a person.
+
+**Request Body:**
+```json
+{
+  "task_ids": [
+    "task-uuid-1",
+    "task-uuid-2"
+  ]
+}
+```
+
+**Response:**
+```json
+[
+  {"id": "task-uuid-1", "assignees": ["person-uuid"]},
+  {"id": "task-uuid-2", "assignees": ["person-uuid"]}
+]
+```
+
+### Clear Task Assignations
+
+```
+PUT /api/actions/tasks/clear-assignation
+```
+
+Removes assignees from tasks.
+
+**Request Body:**
+```json
+{
+  "task_ids": ["task-uuid-1", "task-uuid-2"],
+  "person_id": "person-uuid"
+}
+```
+
+Omit `person_id` to clear all assignees. Include it to remove only that person.
+
+**Response:**
+```json
+["task-uuid-1", "task-uuid-2"]
+```
+
+## Task Comments
+
+### Get Task Comments
+
+```
+GET /api/data/tasks/{task_id}/comments
+```
+
+Returns all comments for a task, including previews, attachments, mentions, and acknowledgements.
+
+**Response:**
+```json
+[
+  {
+    "id": "comment-uuid",
+    "object_id": "task-uuid",
+    "person": {...},
+    "task_status": {...},
+    "text": "Comment text",
+    "previews": [...],
+    "attachment_files": [...],
+    "mentions": [...],
+    "department_mentions": [...],
+    "acknowledgements": [...],
+    "created_at": "2024-01-15T10:30:00Z"
+  }
+]
+```
+
+### Get Single Comment
+
+```
+GET /api/data/tasks/{task_id}/comments/{comment_id}
+```
+
+Returns a specific comment.
+
+### Delete Comment
+
+```
+DELETE /api/data/tasks/{task_id}/comments/{comment_id}
+```
+
+Deletes a comment. Artists can only delete their own comments. Managers can delete any comment.
+
+**Response:** 204 No Content
+
+## Task Previews
+
+### Get Task Previews
+
+```
+GET /api/data/tasks/{task_id}/previews
+```
+
+Returns all preview files for a task.
+
+**Response:**
+```json
+[
+  {
+    "id": "preview-uuid",
+    "task_id": "task-uuid",
+    "revision": 1,
+    "position": 1,
+    "extension": ".mp4",
+    "status": "ready",
+    "validation_status": "neutral"
+  }
+]
+```
+
+### Add Preview to Comment
+
+```
+POST /api/actions/tasks/{task_id}/comments/{comment_id}/add-preview
+```
+
+Creates preview metadata for later file upload.
+
+**Request Body:**
+```json
+{
+  "revision": 2
+}
+```
+
+Omit `revision` or set to `0` to auto-increment.
+
+**Response:**
+```json
+{
+  "id": "preview-uuid",
+  "task_id": "task-uuid",
+  "comment_id": "comment-uuid",
+  "revision": 2,
+  "position": 1
+}
+```
+
+### Add Extra Preview to Comment
+
+```
+POST /api/actions/tasks/{task_id}/comments/{comment_id}/preview-files/{preview_file_id}
+```
+
+Adds an additional preview file to a comment, matching the revision of the specified preview file.
+
+**Response:**
+```json
+{
+  "id": "new-preview-uuid",
+  "task_id": "task-uuid",
+  "comment_id": "comment-uuid",
+  "revision": 2,
+  "position": 2
+}
+```
+
+### Delete Preview from Comment
+
+```
+DELETE /api/actions/tasks/{task_id}/comments/{comment_id}/preview-files/{preview_file_id}
+```
+
+Removes a preview file from a comment.
+
+**Query Parameters:**
+- `force` (boolean): Force deletion even if dependencies exist
+
+**Response:** 204 No Content
+
+### Set Task Main Preview
+
+```
+PUT /api/actions/tasks/{task_id}/set-main-preview
+```
+
+Sets the last preview of a task as the main preview for the related entity.
+
+**Response:**
+```json
+{
+  "id": "entity-uuid",
+  "name": "SH010",
+  "preview_file_id": "preview-uuid"
+}
+```
+
+## Task Review Workflow
+
+### Submit Task for Review
+
+```
+PUT /api/actions/tasks/{task_id}/to-review
+```
+
+Submits a task for review, optionally changing status and creating preview file path information.
+
+**Request Body:**
+```json
+{
+  "person_id": "person-uuid",
+  "comment": "Please review this version",
+  "name": "main",
+  "revision": 1,
+  "change_status": true
+}
+```
+
+**Response:**
+```json
+{
+  "id": "task-uuid",
+  "task_status_id": "to-review-status-uuid",
+  "project": {...},
+  "entity": {...},
+  "person": {...},
+  "comment": "Please review this version",
+  "preview_path": {
+    "folder_path": "/path/to/previews",
+    "file_name": "SH010_anim_v001.mp4"
+  }
+}
+```
+
+## Time Tracking
+
+### Get Task Time Spents
+
+```
+GET /api/actions/tasks/{task_id}/time-spents
+```
+
+Returns all time spents for a task.
+
+**Response:**
+```json
+{
+  "total": 360,
+  "person-uuid": [
+    {
+      "id": "time-spent-uuid",
+      "task_id": "task-uuid",
+      "person_id": "person-uuid",
+      "date": "2024-01-15",
+      "duration": 120
+    }
+  ]
+}
+```
+
+### Get Task Time Spents for Date
+
+```
+GET /api/actions/tasks/{task_id}/time-spents/{date}
+```
+
+Returns time spents for a specific date (format: YYYY-MM-DD).
+
+### Set Time Spent
+
+```
+POST /api/actions/tasks/{task_id}/time-spents/{date}/persons/{person_id}
+```
+
+Sets (replaces) time spent for a person on a task for a specific date.
+
+**Request Body:**
+```json
+{
+  "duration": 120
+}
+```
+
+Duration in minutes.
+
+**Response:**
+```json
+{
+  "id": "time-spent-uuid",
+  "task_id": "task-uuid",
+  "person_id": "person-uuid",
+  "date": "2024-01-15",
+  "duration": 120
+}
+```
+
+### Add Time Spent
+
+```
+POST /api/actions/tasks/{task_id}/time-spents/{date}/persons/{person_id}/add
+```
+
+Adds duration to existing time spent (instead of replacing).
+
+**Request Body:**
+```json
+{
+  "duration": 30
+}
+```
+
+**Response:**
+```json
+{
+  "id": "time-spent-uuid",
+  "task_id": "task-uuid",
+  "person_id": "person-uuid",
+  "date": "2024-01-15",
+  "duration": 150
+}
+```
+
+### Delete Time Spent
+
+```
+DELETE /api/actions/tasks/{task_id}/time-spents/{date}/persons/{person_id}
+```
+
+Deletes time spent entry for a person on a task for a date.
+
+**Response:**
+```json
+{
+  "id": "time-spent-uuid",
+  "duration": 0
+}
+```
+
+## Bulk Operations
+
+### Delete Tasks by ID List
+
+```
+POST /api/actions/projects/{project_id}/delete-tasks
+```
+
+Deletes multiple tasks by their IDs.
+
+**Request Body:**
+```json
+[
+  "task-uuid-1",
+  "task-uuid-2"
+]
+```
+
+**Response:**
+```json
+[
+  "task-uuid-1",
+  "task-uuid-2"
+]
+```
+
+### Delete All Tasks for Task Type
+
+```
+DELETE /api/actions/projects/{project_id}/task-types/{task_type_id}/delete-tasks
+```
+
+Deletes all tasks of a specific type in a project. Requires admin permissions.
+
+**Response:** 204 No Content
+
+## Generic CRUD Operations
+
+Tasks also support standard CRUD operations through the generic endpoints:
+
+### List Tasks
+```
+GET /api/data/tasks
+```
+
+### Get Task
+```
+GET /api/data/tasks/{task_id}
+```
+
+### Create Task
+```
+POST /api/data/tasks
+```
+
+### Update Task
+```
+PUT /api/data/tasks/{task_id}
+```
+
+### Delete Task
+```
+DELETE /api/data/tasks/{task_id}
+```
+
+## Error Responses
+
+All endpoints may return these error codes:
+
+- **400 Bad Request**: Invalid parameters or request body
+- **403 Forbidden**: Insufficient permissions
+- **404 Not Found**: Task, person, or related entity not found
+- **500 Internal Server Error**: Server-side error
+
+**Error Response Format:**
+```json
+{
+  "error": true,
+  "message": "Error description"
+}
+```
+
+## Related Resources
+
+- [Tasks Overview](/api/tasks/overview) - Task concepts and workflow
+- [Task Types](/api/tasks/task-types) - Task type management
+- [Task Status](/api/tasks/task-status) - Status configuration
+- [Comments API](/api/comments/overview) - Comment management
+- [Preview Files API](/api/files/preview-files) - Preview file handling

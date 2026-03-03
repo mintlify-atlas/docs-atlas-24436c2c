@@ -1,0 +1,2345 @@
+---
+title: "Projects API Endpoints"
+description: "Complete reference for all project-related API endpoints"
+---
+
+## Core Project Endpoints
+
+### Get Open Projects
+
+<api-endpoint verb="GET" path="/api/data/projects/open" />
+
+Retrieve all currently active projects. This endpoint returns projects with "Open", "open", or "Active" status, along with enriched data including metadata descriptors, task types, and task statuses.
+
+**Authentication**: Required (JWT)
+
+**Query Parameters**
+
+<ParamField query="name" type="string">
+  Filter projects by name
+</ParamField>
+
+**Response**
+
+<ResponseField name="projects" type="array">
+  <ResponseField name="id" type="string">
+    Project unique identifier
+  </ResponseField>
+  
+  <ResponseField name="name" type="string">
+    Project name
+  </ResponseField>
+  
+  <ResponseField name="code" type="string">
+    Project code
+  </ResponseField>
+  
+  <ResponseField name="description" type="string">
+    Project description
+  </ResponseField>
+  
+  <ResponseField name="project_status_id" type="string">
+    Project status identifier
+  </ResponseField>
+  
+  <ResponseField name="production_type" type="string">
+    Type of production (short, tvshow, featurefilm, etc.)
+  </ResponseField>
+  
+  <ResponseField name="production_style" type="string">
+    Visual style (2d, 3d, vfx, etc.)
+  </ResponseField>
+  
+  <ResponseField name="fps" type="string">
+    Frames per second
+  </ResponseField>
+  
+  <ResponseField name="ratio" type="string">
+    Aspect ratio
+  </ResponseField>
+  
+  <ResponseField name="resolution" type="string">
+    Video resolution
+  </ResponseField>
+  
+  <ResponseField name="start_date" type="string">
+    Production start date
+  </ResponseField>
+  
+  <ResponseField name="end_date" type="string">
+    Production end date
+  </ResponseField>
+  
+  <ResponseField name="descriptors" type="array">
+    Array of metadata descriptors for this project
+  </ResponseField>
+  
+  <ResponseField name="task_types_priority" type="object">
+    Task type IDs mapped to their priority values
+  </ResponseField>
+  
+  <ResponseField name="task_statuses_link" type="object">
+    Task status IDs mapped to priority and roles_for_board
+  </ResponseField>
+  
+  <ResponseField name="first_episode_id" type="string">
+    First episode ID (for TV shows)
+  </ResponseField>
+</ResponseField>
+
+**Example Request**
+
+```bash
+curl -X GET "https://kitsu.example.com/api/data/projects/open" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+**Example Response**
+
+```json
+[
+  {
+    "id": "a24a6ea4-ce75-4665-a070-57453082c25",
+    "name": "My Animation Project",
+    "code": "MAP",
+    "description": "An exciting animation production",
+    "project_status_id": "b35b7fb5-df86-5776-b181-68564193d36",
+    "production_type": "short",
+    "production_style": "3d",
+    "fps": "24",
+    "ratio": "16:9",
+    "resolution": "1920x1080",
+    "start_date": "2024-01-01",
+    "end_date": "2024-12-31",
+    "descriptors": [
+      {
+        "id": "c46c8gc6-eg97-6887-c292-79675204e47",
+        "name": "Difficulty",
+        "field_name": "difficulty",
+        "data_type": "list",
+        "choices": ["easy", "medium", "hard"],
+        "entity_type": "Asset",
+        "for_client": false
+      }
+    ],
+    "task_types_priority": {
+      "d57d9hd7-fh08-7998-d403-02120870i92": 1,
+      "e68e0ie8-gi19-8009-e514-91897426g69": 2
+    },
+    "task_statuses_link": {
+      "f79f1jf9-hj20-9110-f625-02908537h70": {
+        "priority": 1,
+        "roles_for_board": ["user", "admin"]
+      }
+    },
+    "has_avatar": true,
+    "created_at": "2023-12-01T10:00:00Z",
+    "updated_at": "2024-01-15T14:30:00Z"
+  }
+]
+```
+
+---
+
+### Get All Projects
+
+<api-endpoint verb="GET" path="/api/data/projects/all" />
+
+Retrieve all projects in the database regardless of status. Requires manager or admin permissions. Regular users will only see their assigned projects.
+
+**Authentication**: Required (JWT)
+
+**Permissions**: Manager or Admin (regular users see only their projects)
+
+**Query Parameters**
+
+<ParamField query="name" type="string">
+  Filter projects by exact name match
+</ParamField>
+
+**Response**
+
+<ResponseField name="projects" type="array">
+  <ResponseField name="id" type="string">
+    Project unique identifier
+  </ResponseField>
+  
+  <ResponseField name="name" type="string">
+    Project name
+  </ResponseField>
+  
+  <ResponseField name="project_status_id" type="string">
+    Project status identifier
+  </ResponseField>
+  
+  <ResponseField name="project_status_name" type="string">
+    Name of the project status
+  </ResponseField>
+  
+  <ResponseField name="code" type="string">
+    Project code
+  </ResponseField>
+  
+  <ResponseField name="description" type="string">
+    Project description
+  </ResponseField>
+</ResponseField>
+
+**Example Request**
+
+```bash
+curl -X GET "https://kitsu.example.com/api/data/projects/all" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+**Example Response**
+
+```json
+[
+  {
+    "id": "a24a6ea4-ce75-4665-a070-57453082c25",
+    "name": "My Animation Project",
+    "code": "MAP",
+    "project_status_id": "b35b7fb5-df86-5776-b181-68564193d36",
+    "project_status_name": "Open",
+    "description": "An exciting animation production",
+    "production_type": "short",
+    "created_at": "2023-12-01T10:00:00Z"
+  },
+  {
+    "id": "b35b7fb5-df86-5776-b181-68564193d36",
+    "name": "Archived Project",
+    "code": "ARCH",
+    "project_status_id": "c46c8gc6-eg97-6887-c292-79675204e47",
+    "project_status_name": "Closed",
+    "description": "Completed project",
+    "production_type": "commercial",
+    "created_at": "2022-01-01T10:00:00Z"
+  }
+]
+```
+
+---
+
+## Team Management
+
+### Get Production Team
+
+<api-endpoint verb="GET" path="/api/data/projects/{project_id}/team" />
+
+Retrieve all people assigned to the project team.
+
+**Authentication**: Required (JWT)
+
+**Path Parameters**
+
+<ParamField path="project_id" type="string" required>
+  Project unique identifier
+</ParamField>
+
+**Response**
+
+<ResponseField name="team" type="array">
+  <ResponseField name="id" type="string">
+    Person unique identifier
+  </ResponseField>
+  
+  <ResponseField name="first_name" type="string">
+    Person's first name
+  </ResponseField>
+  
+  <ResponseField name="last_name" type="string">
+    Person's last name
+  </ResponseField>
+  
+  <ResponseField name="email" type="string">
+    Person's email address
+  </ResponseField>
+  
+  <ResponseField name="role" type="string">
+    Person's role (user, admin, manager, client, vendor)
+  </ResponseField>
+  
+  <ResponseField name="departments" type="array">
+    Department IDs the person belongs to
+  </ResponseField>
+</ResponseField>
+
+**Example Request**
+
+```bash
+curl -X GET "https://kitsu.example.com/api/data/projects/a24a6ea4-ce75-4665-a070-57453082c25/team" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+**Example Response**
+
+```json
+[
+  {
+    "id": "d57d9hd7-fh08-7998-d403-02120870i92",
+    "first_name": "John",
+    "last_name": "Doe",
+    "email": "john.doe@example.com",
+    "role": "user",
+    "departments": ["e68e0ie8-gi19-8009-e514-91897426g69"],
+    "active": true
+  },
+  {
+    "id": "e68e0ie8-gi19-8009-e514-91897426g69",
+    "first_name": "Jane",
+    "last_name": "Smith",
+    "email": "jane.smith@example.com",
+    "role": "manager",
+    "departments": [],
+    "active": true
+  }
+]
+```
+
+---
+
+### Add Person to Team
+
+<api-endpoint verb="POST" path="/api/data/projects/{project_id}/team" />
+
+Add a person to the project team.
+
+**Authentication**: Required (JWT)
+
+**Permissions**: Manager on project
+
+**Path Parameters**
+
+<ParamField path="project_id" type="string" required>
+  Project unique identifier
+</ParamField>
+
+**Request Body**
+
+<ParamField body="person_id" type="string" required>
+  ID of the person to add to the team
+</ParamField>
+
+**Response**
+
+<ResponseField name="project" type="object">
+  Updated project object
+</ResponseField>
+
+**Example Request**
+
+```bash
+curl -X POST "https://kitsu.example.com/api/data/projects/a24a6ea4-ce75-4665-a070-57453082c25/team" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "person_id": "d57d9hd7-fh08-7998-d403-02120870i92"
+  }'
+```
+
+**Example Response**
+
+```json
+{
+  "id": "a24a6ea4-ce75-4665-a070-57453082c25",
+  "name": "My Animation Project",
+  "team": [
+    "d57d9hd7-fh08-7998-d403-02120870i92",
+    "e68e0ie8-gi19-8009-e514-91897426g69"
+  ]
+}
+```
+
+---
+
+### Remove Person from Team
+
+<api-endpoint verb="DELETE" path="/api/data/projects/{project_id}/team/{person_id}" />
+
+Remove a person from the project team.
+
+**Authentication**: Required (JWT)
+
+**Permissions**: Manager on project
+
+**Path Parameters**
+
+<ParamField path="project_id" type="string" required>
+  Project unique identifier
+</ParamField>
+
+<ParamField path="person_id" type="string" required>
+  Person unique identifier to remove
+</ParamField>
+
+**Response**
+
+<ResponseField name="status" type="string">
+  Returns 204 No Content on success
+</ResponseField>
+
+**Example Request**
+
+```bash
+curl -X DELETE "https://kitsu.example.com/api/data/projects/a24a6ea4-ce75-4665-a070-57453082c25/team/d57d9hd7-fh08-7998-d403-02120870i92" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+---
+
+## Task Type Settings
+
+### Get Project Task Types
+
+<api-endpoint verb="GET" path="/api/data/projects/{project_id}/task-types" />
+
+Retrieve all task types linked to the project.
+
+**Authentication**: Required (JWT)
+
+**Path Parameters**
+
+<ParamField path="project_id" type="string" required>
+  Project unique identifier
+</ParamField>
+
+**Response**
+
+<ResponseField name="task_types" type="array">
+  <ResponseField name="id" type="string">
+    Task type unique identifier
+  </ResponseField>
+  
+  <ResponseField name="name" type="string">
+    Task type name (e.g., "Modeling", "Animation")
+  </ResponseField>
+  
+  <ResponseField name="short_name" type="string">
+    Short abbreviation
+  </ResponseField>
+  
+  <ResponseField name="color" type="string">
+    Hex color code
+  </ResponseField>
+  
+  <ResponseField name="for_entity" type="string">
+    Entity type (Asset, Shot, Edit, etc.)
+  </ResponseField>
+</ResponseField>
+
+**Example Request**
+
+```bash
+curl -X GET "https://kitsu.example.com/api/data/projects/a24a6ea4-ce75-4665-a070-57453082c25/task-types" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+**Example Response**
+
+```json
+[
+  {
+    "id": "f79f1jf9-hj20-9110-f625-02908537h70",
+    "name": "Modeling",
+    "short_name": "mdl",
+    "color": "#3273dc",
+    "for_entity": "Asset",
+    "priority": 1
+  },
+  {
+    "id": "g80g2kg0-ik31-0221-g736-13019648i81",
+    "name": "Animation",
+    "short_name": "anim",
+    "color": "#22d160",
+    "for_entity": "Shot",
+    "priority": 2
+  }
+]
+```
+
+---
+
+### Add Task Type to Project
+
+<api-endpoint verb="POST" path="/api/data/projects/{project_id}/settings/task-types" />
+
+Add a task type to the project configuration.
+
+**Authentication**: Required (JWT)
+
+**Permissions**: Manager on project
+
+**Path Parameters**
+
+<ParamField path="project_id" type="string" required>
+  Project unique identifier
+</ParamField>
+
+**Request Body**
+
+<ParamField body="task_type_id" type="string" required>
+  ID of the task type to add
+</ParamField>
+
+<ParamField body="priority" type="integer">
+  Display priority for ordering (optional)
+</ParamField>
+
+**Response**
+
+<ResponseField name="project" type="object">
+  Updated project object
+</ResponseField>
+
+**Example Request**
+
+```bash
+curl -X POST "https://kitsu.example.com/api/data/projects/a24a6ea4-ce75-4665-a070-57453082c25/settings/task-types" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "task_type_id": "f79f1jf9-hj20-9110-f625-02908537h70",
+    "priority": 1
+  }'
+```
+
+---
+
+### Remove Task Type from Project
+
+<api-endpoint verb="DELETE" path="/api/data/projects/{project_id}/settings/task-types/{task_type_id}" />
+
+Remove a task type from the project configuration.
+
+**Authentication**: Required (JWT)
+
+**Permissions**: Manager on project
+
+**Path Parameters**
+
+<ParamField path="project_id" type="string" required>
+  Project unique identifier
+</ParamField>
+
+<ParamField path="task_type_id" type="string" required>
+  Task type unique identifier to remove
+</ParamField>
+
+**Response**
+
+<ResponseField name="status" type="string">
+  Returns 204 No Content on success
+</ResponseField>
+
+**Example Request**
+
+```bash
+curl -X DELETE "https://kitsu.example.com/api/data/projects/a24a6ea4-ce75-4665-a070-57453082c25/settings/task-types/f79f1jf9-hj20-9110-f625-02908537h70" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+---
+
+## Task Status Settings
+
+### Get Project Task Statuses
+
+<api-endpoint verb="GET" path="/api/data/projects/{project_id}/settings/task-status" />
+
+Retrieve all task statuses linked to the project.
+
+**Authentication**: Required (JWT)
+
+**Path Parameters**
+
+<ParamField path="project_id" type="string" required>
+  Project unique identifier
+</ParamField>
+
+**Response**
+
+<ResponseField name="task_statuses" type="array">
+  <ResponseField name="id" type="string">
+    Task status unique identifier
+  </ResponseField>
+  
+  <ResponseField name="name" type="string">
+    Task status name (e.g., "Todo", "WIP", "Done")
+  </ResponseField>
+  
+  <ResponseField name="short_name" type="string">
+    Short abbreviation
+  </ResponseField>
+  
+  <ResponseField name="color" type="string">
+    Hex color code
+  </ResponseField>
+  
+  <ResponseField name="is_done" type="boolean">
+    Whether this status marks completion
+  </ResponseField>
+</ResponseField>
+
+**Example Request**
+
+```bash
+curl -X GET "https://kitsu.example.com/api/data/projects/a24a6ea4-ce75-4665-a070-57453082c25/settings/task-status" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+---
+
+### Add Task Status to Project
+
+<api-endpoint verb="POST" path="/api/data/projects/{project_id}/settings/task-status" />
+
+Add a task status to the project configuration.
+
+**Authentication**: Required (JWT)
+
+**Permissions**: Manager on project
+
+**Path Parameters**
+
+<ParamField path="project_id" type="string" required>
+  Project unique identifier
+</ParamField>
+
+**Request Body**
+
+<ParamField body="task_status_id" type="string" required>
+  ID of the task status to add
+</ParamField>
+
+**Response**
+
+<ResponseField name="project" type="object">
+  Updated project object
+</ResponseField>
+
+**Example Request**
+
+```bash
+curl -X POST "https://kitsu.example.com/api/data/projects/a24a6ea4-ce75-4665-a070-57453082c25/settings/task-status" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "task_status_id": "h91h3lh1-jl42-1332-h847-24120759j92"
+  }'
+```
+
+---
+
+### Remove Task Status from Project
+
+<api-endpoint verb="DELETE" path="/api/data/projects/{project_id}/settings/task-status/{task_status_id}" />
+
+Remove a task status from the project configuration.
+
+**Authentication**: Required (JWT)
+
+**Permissions**: Manager on project
+
+**Path Parameters**
+
+<ParamField path="project_id" type="string" required>
+  Project unique identifier
+</ParamField>
+
+<ParamField path="task_status_id" type="string" required>
+  Task status unique identifier to remove
+</ParamField>
+
+**Response**
+
+<ResponseField name="status" type="string">
+  Returns 204 No Content on success
+</ResponseField>
+
+**Example Request**
+
+```bash
+curl -X DELETE "https://kitsu.example.com/api/data/projects/a24a6ea4-ce75-4665-a070-57453082c25/settings/task-status/h91h3lh1-jl42-1332-h847-24120759j92" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+---
+
+## Asset Type Settings
+
+### Add Asset Type to Project
+
+<api-endpoint verb="POST" path="/api/data/projects/{project_id}/settings/asset-types" />
+
+Add an asset type to the project configuration.
+
+**Authentication**: Required (JWT)
+
+**Permissions**: Manager on project
+
+**Path Parameters**
+
+<ParamField path="project_id" type="string" required>
+  Project unique identifier
+</ParamField>
+
+**Request Body**
+
+<ParamField body="asset_type_id" type="string" required>
+  ID of the asset type to add
+</ParamField>
+
+**Response**
+
+<ResponseField name="project" type="object">
+  Updated project object
+</ResponseField>
+
+**Example Request**
+
+```bash
+curl -X POST "https://kitsu.example.com/api/data/projects/a24a6ea4-ce75-4665-a070-57453082c25/settings/asset-types" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "asset_type_id": "c46c8gc6-eg97-6887-c292-79675204e47"
+  }'
+```
+
+---
+
+### Remove Asset Type from Project
+
+<api-endpoint verb="DELETE" path="/api/data/projects/{project_id}/settings/asset-types/{asset_type_id}" />
+
+Remove an asset type from the project configuration.
+
+**Authentication**: Required (JWT)
+
+**Permissions**: Manager on project
+
+**Path Parameters**
+
+<ParamField path="project_id" type="string" required>
+  Project unique identifier
+</ParamField>
+
+<ParamField path="asset_type_id" type="string" required>
+  Asset type unique identifier to remove
+</ParamField>
+
+**Response**
+
+<ResponseField name="status" type="string">
+  Returns 204 No Content on success
+</ResponseField>
+
+**Example Request**
+
+```bash
+curl -X DELETE "https://kitsu.example.com/api/data/projects/a24a6ea4-ce75-4665-a070-57453082c25/settings/asset-types/c46c8gc6-eg97-6887-c292-79675204e47" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+---
+
+## Metadata Descriptors
+
+### Get Metadata Descriptors
+
+<api-endpoint verb="GET" path="/api/data/projects/{project_id}/metadata-descriptors" />
+
+Retrieve all metadata descriptors (custom fields) for the project.
+
+**Authentication**: Required (JWT)
+
+**Path Parameters**
+
+<ParamField path="project_id" type="string" required>
+  Project unique identifier
+</ParamField>
+
+**Response**
+
+<ResponseField name="descriptors" type="array">
+  <ResponseField name="id" type="string">
+    Metadata descriptor unique identifier
+  </ResponseField>
+  
+  <ResponseField name="name" type="string">
+    Display name
+  </ResponseField>
+  
+  <ResponseField name="field_name" type="string">
+    Field name (slugified)
+  </ResponseField>
+  
+  <ResponseField name="entity_type" type="string">
+    Entity type (Asset, Shot, Edit, Episode, Sequence)
+  </ResponseField>
+  
+  <ResponseField name="data_type" type="string">
+    Data type (string, number, boolean, list, etc.)
+  </ResponseField>
+  
+  <ResponseField name="choices" type="array">
+    Available choices for list fields
+  </ResponseField>
+  
+  <ResponseField name="for_client" type="boolean">
+    Whether visible to clients
+  </ResponseField>
+  
+  <ResponseField name="departments" type="array">
+    Department IDs that can access this field
+  </ResponseField>
+  
+  <ResponseField name="position" type="integer">
+    Display order
+  </ResponseField>
+</ResponseField>
+
+**Example Request**
+
+```bash
+curl -X GET "https://kitsu.example.com/api/data/projects/a24a6ea4-ce75-4665-a070-57453082c25/metadata-descriptors" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+**Example Response**
+
+```json
+[
+  {
+    "id": "i02i4mi2-km53-2443-i958-35231860k03",
+    "name": "Difficulty",
+    "field_name": "difficulty",
+    "entity_type": "Asset",
+    "data_type": "list",
+    "choices": ["easy", "medium", "hard"],
+    "for_client": false,
+    "departments": [],
+    "position": 1
+  },
+  {
+    "id": "j13j5nj3-ln64-3554-j069-46342971l14",
+    "name": "Frame Range",
+    "field_name": "frame_range",
+    "entity_type": "Shot",
+    "data_type": "string",
+    "choices": [],
+    "for_client": false,
+    "departments": [],
+    "position": 2
+  }
+]
+```
+
+---
+
+### Create Metadata Descriptor
+
+<api-endpoint verb="POST" path="/api/data/projects/{project_id}/metadata-descriptors" />
+
+Create a new metadata descriptor (custom field) for the project.
+
+**Authentication**: Required (JWT)
+
+**Permissions**: Manager on project
+
+**Path Parameters**
+
+<ParamField path="project_id" type="string" required>
+  Project unique identifier
+</ParamField>
+
+**Request Body**
+
+<ParamField body="name" type="string" required>
+  Display name for the field
+</ParamField>
+
+<ParamField body="entity_type" type="string">
+  Entity type: "Asset", "Shot", "Edit", "Episode", or "Sequence" (default: "Asset")
+</ParamField>
+
+<ParamField body="data_type" type="string" required>
+  Data type: "string", "number", "boolean", "list", "checklist", "tags", etc.
+</ParamField>
+
+<ParamField body="choices" type="array">
+  List of choices for list/dropdown fields
+</ParamField>
+
+<ParamField body="for_client" type="string">
+  Whether visible to clients: "True" or "False" (default: "False")
+</ParamField>
+
+<ParamField body="departments" type="array">
+  Array of department IDs that can access this field
+</ParamField>
+
+**Response**
+
+<ResponseField name="descriptor" type="object">
+  Created metadata descriptor object
+</ResponseField>
+
+**Error Codes**
+
+- **400**: Invalid parameters (wrong entity_type, data_type, or empty name)
+
+**Example Request**
+
+```bash
+curl -X POST "https://kitsu.example.com/api/data/projects/a24a6ea4-ce75-4665-a070-57453082c25/metadata-descriptors" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Difficulty",
+    "entity_type": "Asset",
+    "data_type": "list",
+    "choices": ["easy", "medium", "hard"],
+    "for_client": "False",
+    "departments": []
+  }'
+```
+
+**Example Response**
+
+```json
+{
+  "id": "i02i4mi2-km53-2443-i958-35231860k03",
+  "name": "Difficulty",
+  "field_name": "difficulty",
+  "entity_type": "Asset",
+  "data_type": "list",
+  "choices": ["easy", "medium", "hard"],
+  "for_client": false,
+  "departments": [],
+  "position": 1,
+  "created_at": "2024-01-15T10:30:00Z"
+}
+```
+
+---
+
+### Get Metadata Descriptor
+
+<api-endpoint verb="GET" path="/api/data/projects/{project_id}/metadata-descriptors/{descriptor_id}" />
+
+Retrieve a specific metadata descriptor.
+
+**Authentication**: Required (JWT)
+
+**Path Parameters**
+
+<ParamField path="project_id" type="string" required>
+  Project unique identifier
+</ParamField>
+
+<ParamField path="descriptor_id" type="string" required>
+  Metadata descriptor unique identifier
+</ParamField>
+
+**Response**
+
+<ResponseField name="descriptor" type="object">
+  Metadata descriptor object
+</ResponseField>
+
+**Example Request**
+
+```bash
+curl -X GET "https://kitsu.example.com/api/data/projects/a24a6ea4-ce75-4665-a070-57453082c25/metadata-descriptors/i02i4mi2-km53-2443-i958-35231860k03" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+---
+
+### Update Metadata Descriptor
+
+<api-endpoint verb="PUT" path="/api/data/projects/{project_id}/metadata-descriptors/{descriptor_id}" />
+
+Update a metadata descriptor.
+
+**Authentication**: Required (JWT)
+
+**Permissions**: Manager on project
+
+**Path Parameters**
+
+<ParamField path="project_id" type="string" required>
+  Project unique identifier
+</ParamField>
+
+<ParamField path="descriptor_id" type="string" required>
+  Metadata descriptor unique identifier
+</ParamField>
+
+**Request Body**
+
+<ParamField body="name" type="string">
+  Updated display name
+</ParamField>
+
+<ParamField body="data_type" type="string">
+  Updated data type
+</ParamField>
+
+<ParamField body="choices" type="array">
+  Updated list of choices
+</ParamField>
+
+<ParamField body="for_client" type="string">
+  "True" or "False"
+</ParamField>
+
+<ParamField body="departments" type="array">
+  Updated array of department IDs
+</ParamField>
+
+**Response**
+
+<ResponseField name="descriptor" type="object">
+  Updated metadata descriptor object
+</ResponseField>
+
+**Example Request**
+
+```bash
+curl -X PUT "https://kitsu.example.com/api/data/projects/a24a6ea4-ce75-4665-a070-57453082c25/metadata-descriptors/i02i4mi2-km53-2443-i958-35231860k03" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Asset Complexity",
+    "choices": ["simple", "moderate", "complex", "very complex"]
+  }'
+```
+
+---
+
+### Delete Metadata Descriptor
+
+<api-endpoint verb="DELETE" path="/api/data/projects/{project_id}/metadata-descriptors/{descriptor_id}" />
+
+Delete a metadata descriptor. This will also remove the field data from all entities.
+
+**Authentication**: Required (JWT)
+
+**Permissions**: Manager on project
+
+**Path Parameters**
+
+<ParamField path="project_id" type="string" required>
+  Project unique identifier
+</ParamField>
+
+<ParamField path="descriptor_id" type="string" required>
+  Metadata descriptor unique identifier
+</ParamField>
+
+**Response**
+
+<ResponseField name="status" type="string">
+  Returns 204 No Content on success
+</ResponseField>
+
+**Example Request**
+
+```bash
+curl -X DELETE "https://kitsu.example.com/api/data/projects/a24a6ea4-ce75-4665-a070-57453082c25/metadata-descriptors/i02i4mi2-km53-2443-i958-35231860k03" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+---
+
+### Reorder Metadata Descriptors
+
+<api-endpoint verb="POST" path="/api/data/projects/{project_id}/metadata-descriptors/reorder" />
+
+Reorder metadata descriptors for a specific entity type. This sets the display order in the UI.
+
+**Authentication**: Required (JWT)
+
+**Permissions**: Manager on project
+
+**Path Parameters**
+
+<ParamField path="project_id" type="string" required>
+  Project unique identifier
+</ParamField>
+
+**Request Body**
+
+<ParamField body="entity_type" type="string" required>
+  Entity type: "Asset", "Shot", "Edit", "Episode", or "Sequence"
+</ParamField>
+
+<ParamField body="descriptor_ids" type="array" required>
+  Array of descriptor IDs in the desired order
+</ParamField>
+
+**Response**
+
+<ResponseField name="descriptors" type="array">
+  Reordered array of metadata descriptors
+</ResponseField>
+
+**Example Request**
+
+```bash
+curl -X POST "https://kitsu.example.com/api/data/projects/a24a6ea4-ce75-4665-a070-57453082c25/metadata-descriptors/reorder" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "entity_type": "Asset",
+    "descriptor_ids": [
+      "j13j5nj3-ln64-3554-j069-46342971l14",
+      "i02i4mi2-km53-2443-i958-35231860k03"
+    ]
+  }'
+```
+
+---
+
+## Status Automations
+
+### Get Status Automations
+
+<api-endpoint verb="GET" path="/api/data/projects/{project_id}/settings/status-automations" />
+
+Retrieve all status automations linked to the project.
+
+**Authentication**: Required (JWT)
+
+**Permissions**: Manager on project
+
+**Path Parameters**
+
+<ParamField path="project_id" type="string" required>
+  Project unique identifier
+</ParamField>
+
+**Response**
+
+<ResponseField name="status_automations" type="array">
+  Array of status automation objects
+</ResponseField>
+
+**Example Request**
+
+```bash
+curl -X GET "https://kitsu.example.com/api/data/projects/a24a6ea4-ce75-4665-a070-57453082c25/settings/status-automations" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+---
+
+### Add Status Automation to Project
+
+<api-endpoint verb="POST" path="/api/data/projects/{project_id}/settings/status-automations" />
+
+Add a status automation to the project.
+
+**Authentication**: Required (JWT)
+
+**Permissions**: Manager on project
+
+**Path Parameters**
+
+<ParamField path="project_id" type="string" required>
+  Project unique identifier
+</ParamField>
+
+**Request Body**
+
+<ParamField body="status_automation_id" type="string" required>
+  ID of the status automation to add
+</ParamField>
+
+**Response**
+
+<ResponseField name="project" type="object">
+  Updated project object
+</ResponseField>
+
+**Example Request**
+
+```bash
+curl -X POST "https://kitsu.example.com/api/data/projects/a24a6ea4-ce75-4665-a070-57453082c25/settings/status-automations" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "status_automation_id": "k24k6ok4-mo75-4665-k170-57564082l25"
+  }'
+```
+
+---
+
+### Remove Status Automation from Project
+
+<api-endpoint verb="DELETE" path="/api/data/projects/{project_id}/settings/status-automations/{status_automation_id}" />
+
+Remove a status automation from the project.
+
+**Authentication**: Required (JWT)
+
+**Permissions**: Manager on project
+
+**Path Parameters**
+
+<ParamField path="project_id" type="string" required>
+  Project unique identifier
+</ParamField>
+
+<ParamField path="status_automation_id" type="string" required>
+  Status automation unique identifier to remove
+</ParamField>
+
+**Response**
+
+<ResponseField name="status" type="string">
+  Returns 204 No Content on success
+</ResponseField>
+
+**Example Request**
+
+```bash
+curl -X DELETE "https://kitsu.example.com/api/data/projects/a24a6ea4-ce75-4665-a070-57453082c25/settings/status-automations/k24k6ok4-mo75-4665-k170-57564082l25" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+---
+
+## Preview Background Files
+
+### Get Preview Background Files
+
+<api-endpoint verb="GET" path="/api/data/projects/{project_id}/settings/preview-background-files" />
+
+Retrieve all preview background files linked to the project.
+
+**Authentication**: Required (JWT)
+
+**Path Parameters**
+
+<ParamField path="project_id" type="string" required>
+  Project unique identifier
+</ParamField>
+
+**Response**
+
+<ResponseField name="preview_background_files" type="array">
+  Array of preview background file objects
+</ResponseField>
+
+**Example Request**
+
+```bash
+curl -X GET "https://kitsu.example.com/api/data/projects/a24a6ea4-ce75-4665-a070-57453082c25/settings/preview-background-files" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+---
+
+### Add Preview Background File to Project
+
+<api-endpoint verb="POST" path="/api/data/projects/{project_id}/settings/preview-background-files" />
+
+Add a preview background file to the project.
+
+**Authentication**: Required (JWT)
+
+**Permissions**: Manager on project
+
+**Path Parameters**
+
+<ParamField path="project_id" type="string" required>
+  Project unique identifier
+</ParamField>
+
+**Request Body**
+
+<ParamField body="preview_background_file_id" type="string" required>
+  ID of the preview background file to add
+</ParamField>
+
+**Response**
+
+<ResponseField name="project" type="object">
+  Updated project object
+</ResponseField>
+
+**Example Request**
+
+```bash
+curl -X POST "https://kitsu.example.com/api/data/projects/a24a6ea4-ce75-4665-a070-57453082c25/settings/preview-background-files" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "preview_background_file_id": "l35l7pl5-np86-5776-l281-68675193m36"
+  }'
+```
+
+---
+
+### Remove Preview Background File from Project
+
+<api-endpoint verb="DELETE" path="/api/data/projects/{project_id}/settings/preview-background-files/{preview_background_file_id}" />
+
+Remove a preview background file from the project.
+
+**Authentication**: Required (JWT)
+
+**Permissions**: Manager on project
+
+**Path Parameters**
+
+<ParamField path="project_id" type="string" required>
+  Project unique identifier
+</ParamField>
+
+<ParamField path="preview_background_file_id" type="string" required>
+  Preview background file unique identifier to remove
+</ParamField>
+
+**Response**
+
+<ResponseField name="status" type="string">
+  Returns 204 No Content on success
+</ResponseField>
+
+**Example Request**
+
+```bash
+curl -X DELETE "https://kitsu.example.com/api/data/projects/a24a6ea4-ce75-4665-a070-57453082c25/settings/preview-background-files/l35l7pl5-np86-5776-l281-68675193m36" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+---
+
+## Time Tracking
+
+### Get Project Time Spents
+
+<api-endpoint verb="GET" path="/api/data/projects/{project_id}/time-spents" />
+
+Retrieve all time spent entries for the project.
+
+**Authentication**: Required (JWT)
+
+**Path Parameters**
+
+<ParamField path="project_id" type="string" required>
+  Project unique identifier
+</ParamField>
+
+**Response**
+
+<ResponseField name="time_spents" type="array">
+  Array of time spent objects
+</ResponseField>
+
+**Example Request**
+
+```bash
+curl -X GET "https://kitsu.example.com/api/data/projects/a24a6ea4-ce75-4665-a070-57453082c25/time-spents" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+---
+
+### Get Task Type Time Spents
+
+<api-endpoint verb="GET" path="/api/data/projects/{project_id}/task-types/{task_type_id}/time-spents" />
+
+Retrieve time spent entries for a specific task type in the project.
+
+**Authentication**: Required (JWT)
+
+**Permissions**: Manager on project
+
+**Path Parameters**
+
+<ParamField path="project_id" type="string" required>
+  Project unique identifier
+</ParamField>
+
+<ParamField path="task_type_id" type="string" required>
+  Task type unique identifier
+</ParamField>
+
+**Query Parameters**
+
+<ParamField query="start_date" type="string">
+  Start date for filtering (ISO 8601 format: YYYY-MM-DD)
+</ParamField>
+
+<ParamField query="end_date" type="string">
+  End date for filtering (ISO 8601 format: YYYY-MM-DD)
+</ParamField>
+
+**Response**
+
+<ResponseField name="time_spents" type="object">
+  Dictionary of time spent data grouped by person
+</ResponseField>
+
+**Example Request**
+
+```bash
+curl -X GET "https://kitsu.example.com/api/data/projects/a24a6ea4-ce75-4665-a070-57453082c25/task-types/f79f1jf9-hj20-9110-f625-02908537h70/time-spents?start_date=2024-01-01&end_date=2024-01-31" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+---
+
+### Get Month Time Spents
+
+<api-endpoint verb="GET" path="/api/data/projects/{project_id}/budgets/time-spents" />
+
+Get aggregated time spents by month for the project.
+
+**Authentication**: Required (JWT)
+
+**Permissions**: Admin
+
+**Path Parameters**
+
+<ParamField path="project_id" type="string" required>
+  Project unique identifier
+</ParamField>
+
+**Response**
+
+<ResponseField name="time_spents" type="object">
+  Aggregated time spent data by month
+</ResponseField>
+
+**Example Request**
+
+```bash
+curl -X GET "https://kitsu.example.com/api/data/projects/a24a6ea4-ce75-4665-a070-57453082c25/budgets/time-spents" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+---
+
+### Get Day Offs
+
+<api-endpoint verb="GET" path="/api/data/projects/{project_id}/day-offs" />
+
+Retrieve day offs (vacations, holidays) for project team members.
+
+**Authentication**: Required (JWT)
+
+**Permissions**: Project member (not client/vendor)
+
+**Path Parameters**
+
+<ParamField path="project_id" type="string" required>
+  Project unique identifier
+</ParamField>
+
+**Query Parameters**
+
+<ParamField query="start_date" type="string">
+  Start date for filtering (ISO 8601 format: YYYY-MM-DD)
+</ParamField>
+
+<ParamField query="end_date" type="string">
+  End date for filtering (ISO 8601 format: YYYY-MM-DD)
+</ParamField>
+
+**Response**
+
+<ResponseField name="day_offs" type="object">
+  Dictionary of day off entries
+</ResponseField>
+
+**Example Request**
+
+```bash
+curl -X GET "https://kitsu.example.com/api/data/projects/a24a6ea4-ce75-4665-a070-57453082c25/day-offs?start_date=2024-01-01&end_date=2024-12-31" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+---
+
+## Scheduling
+
+### Get Milestones
+
+<api-endpoint verb="GET" path="/api/data/projects/{project_id}/milestones" />
+
+Retrieve all milestones for the project.
+
+**Authentication**: Required (JWT)
+
+**Path Parameters**
+
+<ParamField path="project_id" type="string" required>
+  Project unique identifier
+</ParamField>
+
+**Response**
+
+<ResponseField name="milestones" type="array">
+  Array of milestone objects
+</ResponseField>
+
+**Example Request**
+
+```bash
+curl -X GET "https://kitsu.example.com/api/data/projects/a24a6ea4-ce75-4665-a070-57453082c25/milestones" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+---
+
+### Get Schedule Items
+
+<api-endpoint verb="GET" path="/api/data/projects/{project_id}/schedule-items" />
+
+Retrieve all schedule items for the project.
+
+**Authentication**: Required (JWT)
+
+**Permissions**: Project member (not vendor)
+
+**Path Parameters**
+
+<ParamField path="project_id" type="string" required>
+  Project unique identifier
+</ParamField>
+
+**Response**
+
+<ResponseField name="schedule_items" type="array">
+  Array of schedule item objects
+</ResponseField>
+
+**Example Request**
+
+```bash
+curl -X GET "https://kitsu.example.com/api/data/projects/a24a6ea4-ce75-4665-a070-57453082c25/schedule-items" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+---
+
+### Get Task Type Schedule Items
+
+<api-endpoint verb="GET" path="/api/data/projects/{project_id}/schedule-items/task-types" />
+
+Retrieve schedule items grouped by task type.
+
+**Authentication**: Required (JWT)
+
+**Permissions**: Project member (not vendor)
+
+**Path Parameters**
+
+<ParamField path="project_id" type="string" required>
+  Project unique identifier
+</ParamField>
+
+**Response**
+
+<ResponseField name="schedule_items" type="array">
+  Array of task type schedule items
+</ResponseField>
+
+**Example Request**
+
+```bash
+curl -X GET "https://kitsu.example.com/api/data/projects/a24a6ea4-ce75-4665-a070-57453082c25/schedule-items/task-types" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+---
+
+### Get Asset Type Schedule Items
+
+<api-endpoint verb="GET" path="/api/data/projects/{project_id}/schedule-items/{task_type_id}/asset-types" />
+
+Retrieve schedule items for asset types within a task type.
+
+**Authentication**: Required (JWT)
+
+**Permissions**: Project member (not vendor)
+
+**Path Parameters**
+
+<ParamField path="project_id" type="string" required>
+  Project unique identifier
+</ParamField>
+
+<ParamField path="task_type_id" type="string" required>
+  Task type unique identifier
+</ParamField>
+
+**Response**
+
+<ResponseField name="schedule_items" type="array">
+  Array of asset type schedule items
+</ResponseField>
+
+**Example Request**
+
+```bash
+curl -X GET "https://kitsu.example.com/api/data/projects/a24a6ea4-ce75-4665-a070-57453082c25/schedule-items/f79f1jf9-hj20-9110-f625-02908537h70/asset-types" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+---
+
+### Get Episode Schedule Items
+
+<api-endpoint verb="GET" path="/api/data/projects/{project_id}/schedule-items/{task_type_id}/episodes" />
+
+Retrieve schedule items for episodes within a task type.
+
+**Authentication**: Required (JWT)
+
+**Permissions**: Project member (not vendor)
+
+**Path Parameters**
+
+<ParamField path="project_id" type="string" required>
+  Project unique identifier
+</ParamField>
+
+<ParamField path="task_type_id" type="string" required>
+  Task type unique identifier
+</ParamField>
+
+**Response**
+
+<ResponseField name="schedule_items" type="array">
+  Array of episode schedule items
+</ResponseField>
+
+**Example Request**
+
+```bash
+curl -X GET "https://kitsu.example.com/api/data/projects/a24a6ea4-ce75-4665-a070-57453082c25/schedule-items/f79f1jf9-hj20-9110-f625-02908537h70/episodes" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+---
+
+### Get Sequence Schedule Items
+
+<api-endpoint verb="GET" path="/api/data/projects/{project_id}/schedule-items/{task_type_id}/sequences" />
+
+Retrieve schedule items for sequences within a task type.
+
+**Authentication**: Required (JWT)
+
+**Permissions**: Project member (not vendor)
+
+**Path Parameters**
+
+<ParamField path="project_id" type="string" required>
+  Project unique identifier
+</ParamField>
+
+<ParamField path="task_type_id" type="string" required>
+  Task type unique identifier
+</ParamField>
+
+**Response**
+
+<ResponseField name="schedule_items" type="array">
+  Array of sequence schedule items
+</ResponseField>
+
+**Example Request**
+
+```bash
+curl -X GET "https://kitsu.example.com/api/data/projects/a24a6ea4-ce75-4665-a070-57453082c25/schedule-items/f79f1jf9-hj20-9110-f625-02908537h70/sequences" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+---
+
+## Budget Management
+
+### Get Budgets
+
+<api-endpoint verb="GET" path="/api/data/projects/{project_id}/budgets" />
+
+Retrieve all budgets for the project.
+
+**Authentication**: Required (JWT)
+
+**Permissions**: Manager on project
+
+**Path Parameters**
+
+<ParamField path="project_id" type="string" required>
+  Project unique identifier
+</ParamField>
+
+**Response**
+
+<ResponseField name="budgets" type="array">
+  <ResponseField name="id" type="string">
+    Budget unique identifier
+  </ResponseField>
+  
+  <ResponseField name="name" type="string">
+    Budget name
+  </ResponseField>
+  
+  <ResponseField name="currency" type="string">
+    Currency code (e.g., "USD", "EUR")
+  </ResponseField>
+  
+  <ResponseField name="project_id" type="string">
+    Project identifier
+  </ResponseField>
+  
+  <ResponseField name="created_at" type="string">
+    Creation timestamp
+  </ResponseField>
+</ResponseField>
+
+**Example Request**
+
+```bash
+curl -X GET "https://kitsu.example.com/api/data/projects/a24a6ea4-ce75-4665-a070-57453082c25/budgets" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+**Example Response**
+
+```json
+[
+  {
+    "id": "m46m8qm6-oq97-6887-m392-79786304n47",
+    "name": "Q1 2024 Budget",
+    "currency": "USD",
+    "project_id": "a24a6ea4-ce75-4665-a070-57453082c25",
+    "created_at": "2024-01-01T10:00:00Z",
+    "updated_at": "2024-01-15T14:30:00Z"
+  }
+]
+```
+
+---
+
+### Create Budget
+
+<api-endpoint verb="POST" path="/api/data/projects/{project_id}/budgets" />
+
+Create a new budget for the project.
+
+**Authentication**: Required (JWT)
+
+**Permissions**: Manager on project
+
+**Path Parameters**
+
+<ParamField path="project_id" type="string" required>
+  Project unique identifier
+</ParamField>
+
+**Request Body**
+
+<ParamField body="name" type="string" required>
+  Budget name
+</ParamField>
+
+<ParamField body="currency" type="string">
+  Currency code (default: "USD")
+</ParamField>
+
+**Response**
+
+<ResponseField name="budget" type="object">
+  Created budget object
+</ResponseField>
+
+**Example Request**
+
+```bash
+curl -X POST "https://kitsu.example.com/api/data/projects/a24a6ea4-ce75-4665-a070-57453082c25/budgets" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Q1 2024 Budget",
+    "currency": "USD"
+  }'
+```
+
+---
+
+### Get Budget
+
+<api-endpoint verb="GET" path="/api/data/projects/{project_id}/budgets/{budget_id}" />
+
+Retrieve a specific budget.
+
+**Authentication**: Required (JWT)
+
+**Permissions**: Manager on project
+
+**Path Parameters**
+
+<ParamField path="project_id" type="string" required>
+  Project unique identifier
+</ParamField>
+
+<ParamField path="budget_id" type="string" required>
+  Budget unique identifier
+</ParamField>
+
+**Response**
+
+<ResponseField name="budget" type="object">
+  Budget object
+</ResponseField>
+
+**Example Request**
+
+```bash
+curl -X GET "https://kitsu.example.com/api/data/projects/a24a6ea4-ce75-4665-a070-57453082c25/budgets/m46m8qm6-oq97-6887-m392-79786304n47" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+---
+
+### Update Budget
+
+<api-endpoint verb="PUT" path="/api/data/projects/{project_id}/budgets/{budget_id}" />
+
+Update a budget.
+
+**Authentication**: Required (JWT)
+
+**Permissions**: Manager on project
+
+**Path Parameters**
+
+<ParamField path="project_id" type="string" required>
+  Project unique identifier
+</ParamField>
+
+<ParamField path="budget_id" type="string" required>
+  Budget unique identifier
+</ParamField>
+
+**Request Body**
+
+<ParamField body="name" type="string">
+  Updated budget name
+</ParamField>
+
+<ParamField body="currency" type="string">
+  Updated currency code
+</ParamField>
+
+**Response**
+
+<ResponseField name="budget" type="object">
+  Updated budget object
+</ResponseField>
+
+**Example Request**
+
+```bash
+curl -X PUT "https://kitsu.example.com/api/data/projects/a24a6ea4-ce75-4665-a070-57453082c25/budgets/m46m8qm6-oq97-6887-m392-79786304n47" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Q1 2024 Budget (Revised)"
+  }'
+```
+
+---
+
+### Delete Budget
+
+<api-endpoint verb="DELETE" path="/api/data/projects/{project_id}/budgets/{budget_id}" />
+
+Delete a budget.
+
+**Authentication**: Required (JWT)
+
+**Permissions**: Manager on project
+
+**Path Parameters**
+
+<ParamField path="project_id" type="string" required>
+  Project unique identifier
+</ParamField>
+
+<ParamField path="budget_id" type="string" required>
+  Budget unique identifier
+</ParamField>
+
+**Response**
+
+<ResponseField name="status" type="string">
+  Returns 204 No Content on success
+</ResponseField>
+
+**Example Request**
+
+```bash
+curl -X DELETE "https://kitsu.example.com/api/data/projects/a24a6ea4-ce75-4665-a070-57453082c25/budgets/m46m8qm6-oq97-6887-m392-79786304n47" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+---
+
+## Budget Entries
+
+### Get Budget Entries
+
+<api-endpoint verb="GET" path="/api/data/projects/{project_id}/budgets/{budget_id}/entries" />
+
+Retrieve all entries for a budget.
+
+**Authentication**: Required (JWT)
+
+**Permissions**: Manager on project
+
+**Path Parameters**
+
+<ParamField path="project_id" type="string" required>
+  Project unique identifier
+</ParamField>
+
+<ParamField path="budget_id" type="string" required>
+  Budget unique identifier
+</ParamField>
+
+**Response**
+
+<ResponseField name="entries" type="array">
+  <ResponseField name="id" type="string">
+    Entry unique identifier
+  </ResponseField>
+  
+  <ResponseField name="department_id" type="string">
+    Department identifier
+  </ResponseField>
+  
+  <ResponseField name="person_id" type="string">
+    Person identifier (optional)
+  </ResponseField>
+  
+  <ResponseField name="position" type="string">
+    Position title
+  </ResponseField>
+  
+  <ResponseField name="seniority" type="string">
+    Seniority level
+  </ResponseField>
+  
+  <ResponseField name="daily_salary" type="number">
+    Daily salary amount
+  </ResponseField>
+  
+  <ResponseField name="start_date" type="string">
+    Start date
+  </ResponseField>
+  
+  <ResponseField name="months_duration" type="integer">
+    Duration in months
+  </ResponseField>
+</ResponseField>
+
+**Example Request**
+
+```bash
+curl -X GET "https://kitsu.example.com/api/data/projects/a24a6ea4-ce75-4665-a070-57453082c25/budgets/m46m8qm6-oq97-6887-m392-79786304n47/entries" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+---
+
+### Create Budget Entry
+
+<api-endpoint verb="POST" path="/api/data/projects/{project_id}/budgets/{budget_id}/entries" />
+
+Create a new budget entry.
+
+**Authentication**: Required (JWT)
+
+**Permissions**: Manager on project
+
+**Path Parameters**
+
+<ParamField path="project_id" type="string" required>
+  Project unique identifier
+</ParamField>
+
+<ParamField path="budget_id" type="string" required>
+  Budget unique identifier
+</ParamField>
+
+**Request Body**
+
+<ParamField body="department_id" type="string" required>
+  Department unique identifier
+</ParamField>
+
+<ParamField body="person_id" type="string">
+  Person unique identifier (optional)
+</ParamField>
+
+<ParamField body="position" type="string">
+  Position title
+</ParamField>
+
+<ParamField body="seniority" type="string">
+  Seniority level
+</ParamField>
+
+<ParamField body="daily_salary" type="number">
+  Daily salary amount
+</ParamField>
+
+<ParamField body="start_date" type="string">
+  Start date (ISO 8601 format)
+</ParamField>
+
+<ParamField body="months_duration" type="integer">
+  Duration in months
+</ParamField>
+
+**Response**
+
+<ResponseField name="entry" type="object">
+  Created budget entry object
+</ResponseField>
+
+**Example Request**
+
+```bash
+curl -X POST "https://kitsu.example.com/api/data/projects/a24a6ea4-ce75-4665-a070-57453082c25/budgets/m46m8qm6-oq97-6887-m392-79786304n47/entries" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "department_id": "n57n9rn7-pr08-7998-n503-80897415o58",
+    "person_id": "d57d9hd7-fh08-7998-d403-02120870i92",
+    "position": "Senior Animator",
+    "seniority": "Senior",
+    "daily_salary": 450.00,
+    "start_date": "2024-01-01",
+    "months_duration": 6
+  }'
+```
+
+---
+
+### Get Budget Entry
+
+<api-endpoint verb="GET" path="/api/data/projects/{project_id}/budgets/{budget_id}/entries/{entry_id}" />
+
+Retrieve a specific budget entry.
+
+**Authentication**: Required (JWT)
+
+**Permissions**: Manager on project
+
+**Path Parameters**
+
+<ParamField path="project_id" type="string" required>
+  Project unique identifier
+</ParamField>
+
+<ParamField path="budget_id" type="string" required>
+  Budget unique identifier
+</ParamField>
+
+<ParamField path="entry_id" type="string" required>
+  Budget entry unique identifier
+</ParamField>
+
+**Response**
+
+<ResponseField name="entry" type="object">
+  Budget entry object
+</ResponseField>
+
+**Example Request**
+
+```bash
+curl -X GET "https://kitsu.example.com/api/data/projects/a24a6ea4-ce75-4665-a070-57453082c25/budgets/m46m8qm6-oq97-6887-m392-79786304n47/entries/o68o0so8-qs19-8109-o614-91008526p69" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+---
+
+### Update Budget Entry
+
+<api-endpoint verb="PUT" path="/api/data/projects/{project_id}/budgets/{budget_id}/entries/{entry_id}" />
+
+Update a budget entry.
+
+**Authentication**: Required (JWT)
+
+**Permissions**: Manager on project
+
+**Path Parameters**
+
+<ParamField path="project_id" type="string" required>
+  Project unique identifier
+</ParamField>
+
+<ParamField path="budget_id" type="string" required>
+  Budget unique identifier
+</ParamField>
+
+<ParamField path="entry_id" type="string" required>
+  Budget entry unique identifier
+</ParamField>
+
+**Request Body**
+
+<ParamField body="department_id" type="string">
+  Updated department identifier
+</ParamField>
+
+<ParamField body="person_id" type="string">
+  Updated person identifier
+</ParamField>
+
+<ParamField body="position" type="string">
+  Updated position title
+</ParamField>
+
+<ParamField body="seniority" type="string">
+  Updated seniority level
+</ParamField>
+
+<ParamField body="daily_salary" type="number">
+  Updated daily salary amount
+</ParamField>
+
+<ParamField body="start_date" type="string">
+  Updated start date
+</ParamField>
+
+<ParamField body="months_duration" type="integer">
+  Updated duration in months
+</ParamField>
+
+<ParamField body="exceptions" type="object">
+  Map of date-specific amount exceptions (key: date, value: amount)
+</ParamField>
+
+**Response**
+
+<ResponseField name="entry" type="object">
+  Updated budget entry object
+</ResponseField>
+
+**Example Request**
+
+```bash
+curl -X PUT "https://kitsu.example.com/api/data/projects/a24a6ea4-ce75-4665-a070-57453082c25/budgets/m46m8qm6-oq97-6887-m392-79786304n47/entries/o68o0so8-qs19-8109-o614-91008526p69" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "daily_salary": 475.00,
+    "exceptions": {
+      "2024-02-01": 500.00,
+      "2024-03-01": 520.00
+    }
+  }'
+```
+
+---
+
+### Delete Budget Entry
+
+<api-endpoint verb="DELETE" path="/api/data/projects/{project_id}/budgets/{budget_id}/entries/{entry_id}" />
+
+Delete a budget entry.
+
+**Authentication**: Required (JWT)
+
+**Permissions**: Manager on project
+
+**Path Parameters**
+
+<ParamField path="project_id" type="string" required>
+  Project unique identifier
+</ParamField>
+
+<ParamField path="budget_id" type="string" required>
+  Budget unique identifier
+</ParamField>
+
+<ParamField path="entry_id" type="string" required>
+  Budget entry unique identifier
+</ParamField>
+
+**Response**
+
+<ResponseField name="status" type="string">
+  Returns 204 No Content on success
+</ResponseField>
+
+**Example Request**
+
+```bash
+curl -X DELETE "https://kitsu.example.com/api/data/projects/a24a6ea4-ce75-4665-a070-57453082c25/budgets/m46m8qm6-oq97-6887-m392-79786304n47/entries/o68o0so8-qs19-8109-o614-91008526p69" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+---
+
+## Production Schedule Versions
+
+### Get Schedule Version Task Links
+
+<api-endpoint verb="GET" path="/api/data/production-schedule-versions/{production_schedule_version_id}/task-links" />
+
+Retrieve task links for a production schedule version.
+
+**Authentication**: Required (JWT)
+
+**Permissions**: Project member (not vendor/client)
+
+**Path Parameters**
+
+<ParamField path="production_schedule_version_id" type="string" required>
+  Production schedule version unique identifier
+</ParamField>
+
+**Query Parameters**
+
+<ParamField query="task_type_id" type="string">
+  Filter by task type ID
+</ParamField>
+
+**Response**
+
+<ResponseField name="task_links" type="array">
+  Array of task link objects
+</ResponseField>
+
+**Example Request**
+
+```bash
+curl -X GET "https://kitsu.example.com/api/data/production-schedule-versions/p79p1tp9-rt20-9220-p725-02119637q80/task-links" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+---
+
+### Set Task Links from Production
+
+<api-endpoint verb="POST" path="/api/actions/production-schedule-versions/{production_schedule_version_id}/set-task-links-from-production" />
+
+Set task links for a schedule version based on current production tasks.
+
+**Authentication**: Required (JWT)
+
+**Permissions**: Manager on project
+
+**Path Parameters**
+
+<ParamField path="production_schedule_version_id" type="string" required>
+  Production schedule version unique identifier
+</ParamField>
+
+**Response**
+
+<ResponseField name="result" type="object">
+  Operation result
+</ResponseField>
+
+**Example Request**
+
+```bash
+curl -X POST "https://kitsu.example.com/api/actions/production-schedule-versions/p79p1tp9-rt20-9220-p725-02119637q80/set-task-links-from-production" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json"
+```
+
+---
+
+### Set Task Links from Schedule Version
+
+<api-endpoint verb="POST" path="/api/actions/production-schedule-versions/{production_schedule_version_id}/set-task-links-from-production-schedule-version" />
+
+Copy task links from another schedule version.
+
+**Authentication**: Required (JWT)
+
+**Permissions**: Manager on project
+
+**Path Parameters**
+
+<ParamField path="production_schedule_version_id" type="string" required>
+  Target production schedule version unique identifier
+</ParamField>
+
+**Request Body**
+
+<ParamField body="production_schedule_version_id" type="string" required>
+  Source production schedule version unique identifier to copy from
+</ParamField>
+
+**Response**
+
+<ResponseField name="result" type="object">
+  Operation result
+</ResponseField>
+
+**Error Codes**
+
+- **400**: Schedule versions must belong to the same project
+
+**Example Request**
+
+```bash
+curl -X POST "https://kitsu.example.com/api/actions/production-schedule-versions/p79p1tp9-rt20-9220-p725-02119637q80/set-task-links-from-production-schedule-version" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "production_schedule_version_id": "q80q2uq0-su31-0331-q836-13220748r91"
+  }'
+```
+
+---
+
+### Apply Schedule Version to Production
+
+<api-endpoint verb="POST" path="/api/actions/production-schedule-versions/{production_schedule_version_id}/apply-to-production" />
+
+Apply a schedule version's task links and dates to the actual production.
+
+**Authentication**: Required (JWT)
+
+**Permissions**: Manager on project
+
+**Path Parameters**
+
+<ParamField path="production_schedule_version_id" type="string" required>
+  Production schedule version unique identifier
+</ParamField>
+
+**Response**
+
+<ResponseField name="result" type="object">
+  Operation result
+</ResponseField>
+
+**Example Request**
+
+```bash
+curl -X POST "https://kitsu.example.com/api/actions/production-schedule-versions/p79p1tp9-rt20-9220-p725-02119637q80/apply-to-production" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json"
+```

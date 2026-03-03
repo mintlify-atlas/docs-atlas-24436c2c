@@ -1,0 +1,167 @@
+---
+title: "CLI Overview"
+description: "Introduction to the Zou command-line interface for managing Kitsu API instances"
+---
+
+## Introduction
+
+Zou provides a comprehensive command-line interface (CLI) for managing your Kitsu API instance. The CLI is built using Python Click and offers commands for database management, user administration, data synchronization, and more.
+
+## Installation
+
+The Zou CLI is installed automatically when you install Zou:
+
+```bash
+pip install zou
+```
+
+Verify the installation by checking the version:
+
+```bash
+zou version
+```
+
+**Expected output:**
+```
+Zou version: 0.x.x
+```
+
+## Basic Usage
+
+All Zou commands follow this pattern:
+
+```bash
+zou <command> [OPTIONS] [ARGUMENTS]
+```
+
+To see all available commands:
+
+```bash
+zou --help
+```
+
+## Command Categories
+
+The Zou CLI commands are organized into several categories:
+
+### Database Management
+Commands for initializing, migrating, and managing the database schema:
+- `init-db` - Create database tables
+- `upgrade-db` - Upgrade database schema
+- `migrate-db` - Generate migration files
+- `reset-db` - Drop and recreate tables
+- `clear-db` - Drop all tables
+
+[View all database commands →](/cli/database-commands)
+
+### User Administration
+Commands for managing users, authentication, and permissions:
+- `create-admin` - Create admin users
+- `change-password` - Change user passwords
+- `create-bot` - Create bot accounts
+- `sync-with-ldap-server` - Sync users from LDAP
+
+[View all admin commands →](/cli/admin-commands)
+
+### Data Synchronization
+Commands for syncing data between Zou instances:
+- `sync-full` - Full data synchronization
+- `sync-changes` - Continuous change synchronization
+- `sync-last-events` - Sync recent events
+
+### File Management
+Commands for managing preview files and storage:
+- `upload-files-to-cloud-storage` - Upload files to cloud storage
+- `download-storage-files` - Download files from cloud storage
+- `generate-preview-extra` - Generate preview thumbnails and tiles
+
+### Plugin Management
+Commands for installing and managing Zou plugins:
+- `install-plugin` - Install a plugin
+- `list-plugins` - List installed plugins
+- `uninstall-plugin` - Remove a plugin
+
+## Configuration
+
+Zou uses environment variables for configuration. Make sure the following variables are set:
+
+```bash
+export DB_HOST=localhost
+export DB_PORT=5432
+export DB_NAME=zoudb
+export DB_USERNAME=zou
+export DB_PASSWORD=yourpassword
+```
+
+## Common Workflows
+
+### Initial Setup
+
+When setting up a new Zou instance:
+
+```bash
+# 1. Initialize the database
+zou init-db
+
+# 2. Initialize default data
+zou init-data
+
+# 3. Create an admin user
+zou create-admin admin@example.com --password securepassword
+```
+
+### Upgrading
+
+When upgrading Zou to a new version:
+
+```bash
+# Upgrade the database schema
+zou upgrade-db
+
+# Clear auth tokens if needed
+zou clean-auth-tokens
+```
+
+### Maintenance
+
+Regular maintenance tasks:
+
+```bash
+# Remove old events and notifications (older than 90 days)
+zou remove-old-data --days 90
+
+# Clean expired auth tokens
+zou clean-auth-tokens
+
+# Clear Redis cache
+zou clear-memory-cache
+```
+
+## Getting Help
+
+For any command, use the `--help` flag to see detailed usage information:
+
+```bash
+zou <command> --help
+```
+
+Example:
+```bash
+zou create-admin --help
+```
+
+**Output:**
+```
+Usage: zou create-admin [OPTIONS] EMAIL
+
+  Create an admin user to allow usage of the API when database is empty.
+
+Options:
+  --password TEXT
+  --help           Show this message and exit.
+```
+
+## Next Steps
+
+- [Database Commands](/cli/database-commands) - Learn about database management commands
+- [Admin Commands](/cli/admin-commands) - Learn about user and system administration commands

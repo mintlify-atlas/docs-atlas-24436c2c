@@ -1,0 +1,554 @@
+---
+title: "Sequence & Episode Management"
+description: "Creating and managing sequences and episodes in production"
+---
+
+## Overview
+
+Sequences and episodes organize your production hierarchy. This guide covers creating, retrieving, and managing these entities.
+
+## Episodes
+
+Episodes are used for TV series and episodic content. They serve as the top-level container for sequences.
+
+### Creating an Episode
+
+Create a new episode within a project:
+
+```bash
+POST /api/data/projects/{project_id}/episodes
+```
+
+**Request Body:**
+
+```json
+{
+  "name": "EP01",
+  "description": "Pilot Episode",
+  "status": "running"
+}
+```
+
+**Parameters:**
+- `name` (required): Episode identifier
+- `description` (required): Episode description
+- `status` (optional): One of `running`, `complete`, `standby`, `canceled`. Defaults to `running`
+- `data` (optional): Custom metadata as JSON object
+
+**Response:**
+
+```json
+{
+  "id": "episode-uuid",
+  "name": "EP01",
+  "description": "Pilot Episode",
+  "status": "running",
+  "project_id": "project-uuid",
+  "created_at": "2024-01-15T10:30:00Z",
+  "updated_at": "2024-01-15T10:30:00Z"
+}
+```
+
+### Getting Episodes
+
+Retrieve all episodes for a project:
+
+```bash
+GET /api/data/projects/{project_id}/episodes
+```
+
+**Response:**
+
+```json
+[
+  {
+    "id": "episode-uuid",
+    "name": "EP01",
+    "description": "Pilot Episode",
+    "status": "running",
+    "project_id": "project-uuid"
+  }
+]
+```
+
+### Getting a Single Episode
+
+Retrieve detailed information for a specific episode:
+
+```bash
+GET /api/data/episodes/{episode_id}
+```
+
+**Response:**
+
+```json
+{
+  "id": "episode-uuid",
+  "name": "EP01",
+  "description": "Pilot Episode",
+  "status": "running",
+  "project_id": "project-uuid",
+  "project_name": "My Series",
+  "created_at": "2024-01-15T10:30:00Z",
+  "updated_at": "2024-01-15T10:30:00Z"
+}
+```
+
+### Getting Episode Tasks
+
+Retrieve all tasks associated with an episode:
+
+```bash
+GET /api/data/episodes/{episode_id}/tasks
+```
+
+This returns tasks directly assigned to the episode entity (not tasks on shots within the episode).
+
+### Getting Episode Sequences
+
+Retrieve all sequences within an episode:
+
+```bash
+GET /api/data/episodes/{episode_id}/sequences
+```
+
+**Response:**
+
+```json
+[
+  {
+    "id": "sequence-uuid",
+    "name": "SQ010",
+    "description": "Opening sequence",
+    "parent_id": "episode-uuid",
+    "project_id": "project-uuid"
+  }
+]
+```
+
+### Getting Episode Shots
+
+Retrieve all shots across all sequences in an episode:
+
+```bash
+GET /api/data/episodes/{episode_id}/shots
+```
+
+This returns all shots from all sequences belonging to the episode.
+
+### Deleting an Episode
+
+Delete an episode by ID:
+
+```bash
+DELETE /api/data/episodes/{episode_id}
+```
+
+**Query Parameters:**
+- `force` (optional): Set to `true` to force deletion including all related sequences and shots
+
+**Response:** `204 No Content`
+
+## Sequences
+
+Sequences organize shots into logical groups within a project or episode.
+
+### Creating a Sequence
+
+Create a new sequence within a project:
+
+```bash
+POST /api/data/projects/{project_id}/sequences
+```
+
+**Request Body:**
+
+```json
+{
+  "name": "SQ010",
+  "episode_id": "episode-uuid",
+  "description": "Opening sequence"
+}
+```
+
+**Parameters:**
+- `name` (required): Sequence identifier
+- `episode_id` (optional): Parent episode ID (for TV series)
+- `description` (optional): Sequence description
+- `data` (optional): Custom metadata as JSON object
+
+**Response:**
+
+```json
+{
+  "id": "sequence-uuid",
+  "name": "SQ010",
+  "description": "Opening sequence",
+  "episode_id": "episode-uuid",
+  "parent_id": "episode-uuid",
+  "project_id": "project-uuid",
+  "created_at": "2024-01-15T11:00:00Z",
+  "updated_at": "2024-01-15T11:00:00Z"
+}
+```
+
+**Note:** For feature films, omit the `episode_id` to create a sequence directly under the project.
+
+### Getting Sequences
+
+Retrieve all sequences for a project:
+
+```bash
+GET /api/data/projects/{project_id}/sequences
+```
+
+**Response:**
+
+```json
+[
+  {
+    "id": "sequence-uuid",
+    "name": "SQ010",
+    "description": "Opening sequence",
+    "episode_id": "episode-uuid",
+    "project_id": "project-uuid"
+  }
+]
+```
+
+### Getting a Single Sequence
+
+Retrieve detailed information for a specific sequence:
+
+```bash
+GET /api/data/sequences/{sequence_id}
+```
+
+**Response:**
+
+```json
+{
+  "id": "sequence-uuid",
+  "name": "SQ010",
+  "description": "Opening sequence",
+  "parent_id": "episode-uuid",
+  "episode_id": "episode-uuid",
+  "episode_name": "EP01",
+  "project_id": "project-uuid",
+  "project_name": "My Series",
+  "created_at": "2024-01-15T11:00:00Z",
+  "updated_at": "2024-01-15T11:00:00Z"
+}
+```
+
+### Getting Sequence Shots
+
+Retrieve all shots within a sequence:
+
+```bash
+GET /api/data/sequences/{sequence_id}/shots
+```
+
+**Response:**
+
+```json
+[
+  {
+    "id": "shot-uuid",
+    "name": "SH010",
+    "description": "Character enters",
+    "nb_frames": 120,
+    "parent_id": "sequence-uuid",
+    "project_id": "project-uuid",
+    "sequence_name": "SQ010",
+    "project_name": "My Series"
+  }
+]
+```
+
+### Getting Sequence Tasks
+
+Retrieve all tasks associated with a sequence:
+
+```bash
+GET /api/data/sequences/{sequence_id}/tasks
+```
+
+This returns tasks directly assigned to the sequence entity.
+
+### Getting Sequence Shot Tasks
+
+Retrieve all tasks for all shots in a sequence:
+
+```bash
+GET /api/data/sequences/{sequence_id}/shot-tasks
+```
+
+This is useful for getting a complete task overview for a sequence.
+
+### Deleting a Sequence
+
+Delete a sequence by ID:
+
+```bash
+DELETE /api/data/sequences/{sequence_id}
+```
+
+**Query Parameters:**
+- `force` (optional): Set to `true` to force deletion including all related shots
+
+**Response:** `204 No Content`
+
+## Filtering and Queries
+
+### Filter Sequences by Episode
+
+Retrieve sequences filtered by episode:
+
+```bash
+GET /api/data/sequences?episode_id={episode_id}
+```
+
+### Filter with Multiple Criteria
+
+Many endpoints support query parameters for filtering:
+
+```bash
+GET /api/data/sequences?project_id={project_id}&episode_id={episode_id}
+```
+
+## Sequences and Tasks
+
+Get sequences with their associated tasks in one request:
+
+```bash
+GET /api/data/sequences/with-tasks?project_id={project_id}
+```
+
+**Response:**
+
+```json
+[
+  {
+    "id": "sequence-uuid",
+    "name": "SQ010",
+    "project_id": "project-uuid",
+    "tasks": [
+      {
+        "id": "task-uuid",
+        "task_type_id": "tasktype-uuid",
+        "task_status_id": "status-uuid",
+        "assignees": ["person-uuid"]
+      }
+    ]
+  }
+]
+```
+
+## Episodes and Tasks
+
+Get episodes with their associated tasks:
+
+```bash
+GET /api/data/episodes/with-tasks?project_id={project_id}
+```
+
+Same structure as sequences with tasks.
+
+## Scenes
+
+Scenes are optional entities for scene-based workflows.
+
+### Creating a Scene
+
+Create a scene within a sequence:
+
+```bash
+POST /api/data/projects/{project_id}/scenes
+```
+
+**Request Body:**
+
+```json
+{
+  "name": "SC001",
+  "sequence_id": "sequence-uuid"
+}
+```
+
+**Response:**
+
+```json
+{
+  "id": "scene-uuid",
+  "name": "SC001",
+  "parent_id": "sequence-uuid",
+  "project_id": "project-uuid"
+}
+```
+
+### Getting Scenes for a Sequence
+
+Retrieve all scenes in a sequence:
+
+```bash
+GET /api/data/sequences/{sequence_id}/scenes
+```
+
+### Linking Shots to Scenes
+
+Link a shot to a scene:
+
+```bash
+POST /api/data/scenes/{scene_id}/shots
+```
+
+**Request Body:**
+
+```json
+{
+  "shot_id": "shot-uuid"
+}
+```
+
+**Response:**
+
+```json
+{
+  "scene_id": "scene-uuid",
+  "shot_id": "shot-uuid"
+}
+```
+
+### Getting Shots from a Scene
+
+Retrieve all shots linked to a scene:
+
+```bash
+GET /api/data/scenes/{scene_id}/shots
+```
+
+### Unlinking a Shot from a Scene
+
+Remove the link between a shot and a scene:
+
+```bash
+DELETE /api/data/scenes/{scene_id}/shots/{shot_id}
+```
+
+## Production Statistics
+
+### Episode Statistics
+
+Get task statistics by episode:
+
+```bash
+GET /api/data/projects/{project_id}/episodes/stats
+```
+
+**Response:**
+
+```json
+{
+  "episode-uuid": {
+    "tasktype-uuid": {
+      "status-uuid": {
+        "count": 50,
+        "frames": 6000,
+        "drawings": 1500
+      }
+    }
+  },
+  "all": {
+    "all": {
+      "status-uuid": {
+        "count": 200,
+        "frames": 24000,
+        "drawings": 6000
+      }
+    }
+  }
+}
+```
+
+### Episode Retake Statistics
+
+Get retake statistics by episode:
+
+```bash
+GET /api/data/projects/{project_id}/episodes/retake-stats
+```
+
+**Response:**
+
+```json
+{
+  "episode-uuid": {
+    "max_retake_count": 4,
+    "done": {
+      "count": 197,
+      "frames": 16090,
+      "drawings": 16090
+    },
+    "retake": {
+      "count": 0,
+      "frames": 0,
+      "drawings": 0
+    },
+    "evolution": {
+      "1": {
+        "retake": {
+          "count": 80,
+          "frames": 7900,
+          "drawings": 8000
+        },
+        "done": {
+          "count": 117,
+          "frames": 3900,
+          "drawings": 8000
+        }
+      }
+    }
+  }
+}
+```
+
+## Best Practices
+
+### Naming Sequences
+
+Use zero-padded numbering for proper sorting:
+- Good: `SQ010`, `SQ020`, `SQ030`
+- Avoid: `SQ1`, `SQ2`, `SQ3`
+
+### Episode Status Workflow
+
+1. Start episodes with `running` status
+2. Use `standby` for episodes on hold
+3. Mark episodes as `complete` when delivered
+4. Use `canceled` for episodes not proceeding
+
+### Organizing Production
+
+**For TV Series:**
+```
+Project → Episodes → Sequences → Shots
+```
+
+**For Feature Films:**
+```
+Project → Sequences → Shots
+```
+
+**For Scene-Based Workflow:**
+```
+Project → Sequences → Scenes
+                     ↓
+                    Shots (linked to scenes)
+```
+
+## Next Steps
+
+- [Shots & Sequences Overview](/api/shots/overview) - Understand the hierarchy
+- [Endpoints Reference](/api/shots/endpoints) - Complete API reference
+- [Tasks API](/api/tasks/overview) - Managing work on sequences and shots

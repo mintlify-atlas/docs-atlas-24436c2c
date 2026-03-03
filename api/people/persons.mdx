@@ -1,0 +1,420 @@
+---
+title: Person Management
+description: Manage users, profiles, roles, and permissions in Zou
+---
+
+## Overview
+
+The Person API provides comprehensive user management capabilities for your Zou/Kitsu instance. This includes creating and managing user accounts, assigning roles and permissions, tracking time and presence, and managing user profiles.
+
+## User Roles
+
+Zou supports the following user roles with different permission levels:
+
+<AccordionGroup>
+  <Accordion title="Admin (Studio Manager)">
+    Full access to all resources and settings. Can manage users, projects, and system configuration.
+  </Accordion>
+  
+  <Accordion title="Manager (Production Manager)">
+    Can manage projects and view production data. Has access to time tracking and quota reports.
+  </Accordion>
+  
+  <Accordion title="Supervisor">
+    Can supervise specific departments and tasks. Limited to assigned projects and departments.
+  </Accordion>
+  
+  <Accordion title="User (Artist)">
+    Standard user with access to assigned tasks and projects. Can track their own time and view their assignments.
+  </Accordion>
+  
+  <Accordion title="Client">
+    External client with limited read-only access to approved content.
+  </Accordion>
+  
+  <Accordion title="Vendor">
+    External vendor with access to specific outsourced tasks.
+  </Accordion>
+</AccordionGroup>
+
+## Contract Types
+
+Person records support various contract types:
+
+- **open-ended**: Permanent/open-ended contracts
+- **fixed-term**: Fixed-term contracts
+- **short-term**: Short-term contracts
+- **freelance**: Freelance workers
+- **apprentice**: Apprentices
+- **internship**: Interns
+
+## Person Fields
+
+<ResponseField name="id" type="string" format="uuid">
+  Unique identifier for the person
+</ResponseField>
+
+<ResponseField name="first_name" type="string" required>
+  Person's first name
+</ResponseField>
+
+<ResponseField name="last_name" type="string" required>
+  Person's last name
+</ResponseField>
+
+<ResponseField name="email" type="string" format="email" required>
+  Person's email address (unique for non-bot users)
+</ResponseField>
+
+<ResponseField name="phone" type="string">
+  Phone number
+</ResponseField>
+
+<ResponseField name="role" type="string" default="user">
+  User role: `user`, `admin`, `supervisor`, `manager`, `client`, or `vendor`
+</ResponseField>
+
+<ResponseField name="position" type="string">
+  Position type: `supervisor`, `lead`, or `artist`
+</ResponseField>
+
+<ResponseField name="seniority" type="string">
+  Seniority level: `senior`, `mid`, or `junior`
+</ResponseField>
+
+<ResponseField name="contract_type" type="string" default="open-ended">
+  Contract type (see Contract Types section)
+</ResponseField>
+
+<ResponseField name="active" type="boolean" default="true">
+  Whether the person is active in the system
+</ResponseField>
+
+<ResponseField name="archived" type="boolean" default="false">
+  Whether the person is archived
+</ResponseField>
+
+<ResponseField name="departments" type="array">
+  Array of department IDs the person belongs to
+</ResponseField>
+
+<ResponseField name="desktop_login" type="string">
+  Desktop login username for LDAP/SSO integration
+</ResponseField>
+
+<ResponseField name="timezone" type="string">
+  Person's timezone (e.g., "America/New_York")
+</ResponseField>
+
+<ResponseField name="locale" type="string">
+  Person's locale for language/localization (e.g., "en_US")
+</ResponseField>
+
+<ResponseField name="daily_salary" type="integer" default="0">
+  Daily salary in cents for budgeting calculations
+</ResponseField>
+
+<ResponseField name="has_avatar" type="boolean" default="false">
+  Whether the person has an uploaded avatar
+</ResponseField>
+
+<ResponseField name="is_bot" type="boolean" default="false">
+  Whether this is a bot/service account
+</ResponseField>
+
+<ResponseField name="expiration_date" type="string" format="date">
+  Account expiration date (for temporary accounts)
+</ResponseField>
+
+<ResponseField name="last_presence" type="string" format="date">
+  Last detected presence (based on time tracking or desktop login)
+</ResponseField>
+
+## Two-Factor Authentication
+
+Zou supports multiple 2FA methods:
+
+- **TOTP**: Time-based One-Time Password (e.g., Google Authenticator)
+- **Email OTP**: Email-based one-time passwords
+- **FIDO**: FIDO/WebAuthn hardware security keys
+
+<ResponseField name="totp_enabled" type="boolean">
+  Whether TOTP 2FA is enabled
+</ResponseField>
+
+<ResponseField name="email_otp_enabled" type="boolean">
+  Whether email OTP is enabled
+</ResponseField>
+
+<ResponseField name="fido_enabled" type="boolean">
+  Whether FIDO 2FA is enabled
+</ResponseField>
+
+<ResponseField name="preferred_two_factor_authentication" type="string">
+  Preferred 2FA method: `totp`, `email_otp`, or `fido`
+</ResponseField>
+
+## Notification Settings
+
+<ResponseField name="notifications_enabled" type="boolean" default="false">
+  Whether notifications are enabled
+</ResponseField>
+
+<ResponseField name="notifications_slack_enabled" type="boolean" default="false">
+  Whether Slack notifications are enabled
+</ResponseField>
+
+<ResponseField name="notifications_slack_userid" type="string">
+  Slack user ID for notifications
+</ResponseField>
+
+<ResponseField name="notifications_mattermost_enabled" type="boolean" default="false">
+  Whether Mattermost notifications are enabled
+</ResponseField>
+
+<ResponseField name="notifications_mattermost_userid" type="string">
+  Mattermost user ID
+</ResponseField>
+
+<ResponseField name="notifications_discord_enabled" type="boolean" default="false">
+  Whether Discord notifications are enabled
+</ResponseField>
+
+<ResponseField name="notifications_discord_userid" type="string">
+  Discord user ID
+</ResponseField>
+
+## LDAP Integration
+
+<ResponseField name="is_generated_from_ldap" type="boolean" default="false">
+  Whether this user was created via LDAP sync
+</ResponseField>
+
+<ResponseField name="ldap_uid" type="string">
+  LDAP unique identifier (unique across all users)
+</ResponseField>
+
+## Time Tracking & Presence
+
+Person records track time spent and presence data:
+
+### Desktop Login Logs
+
+Track when users log in from their desktop applications:
+
+```bash
+GET /api/data/persons/{person_id}/desktop-login-logs
+POST /api/data/persons/{person_id}/desktop-login-logs
+```
+
+See [Person Management Endpoints](/api/people/endpoints#desktop-login-logs) for details.
+
+### Time Spent
+
+Track time spent on tasks by day, week, month, or year:
+
+```bash
+GET /api/data/persons/{person_id}/time-spents
+GET /api/data/persons/{person_id}/time-spents/{date}
+GET /api/data/persons/{person_id}/time-spents/year/{year}
+GET /api/data/persons/{person_id}/time-spents/month/{year}/{month}
+GET /api/data/persons/{person_id}/time-spents/week/{year}/{week}
+GET /api/data/persons/{person_id}/time-spents/day/{year}/{month}/{day}
+```
+
+### Day Offs
+
+Manage vacation and time off:
+
+```bash
+GET /api/data/persons/{person_id}/day-offs
+GET /api/data/persons/{person_id}/day-offs/{date}
+GET /api/data/persons/{person_id}/day-offs/year/{year}
+GET /api/data/persons/{person_id}/day-offs/month/{year}/{month}
+GET /api/data/persons/{person_id}/day-offs/week/{year}/{week}
+```
+
+### Quota Tracking
+
+Track shot quotas (completed shots) for performance metrics:
+
+```bash
+GET /api/data/persons/{person_id}/quota-shots/month/{year}/{month}
+GET /api/data/persons/{person_id}/quota-shots/week/{year}/{week}
+GET /api/data/persons/{person_id}/quota-shots/day/{year}/{month}/{day}
+```
+
+Quota endpoints support a `count_mode` query parameter:
+- `weighted`: Count weighted shots (default)
+- `weighteddone`: Count weighted completed shots
+- `feedback`: Count shots with feedback
+- `done`: Count completed shots
+
+## Department Assignment
+
+Users can be assigned to multiple departments:
+
+```bash
+# Add person to department
+POST /api/actions/persons/{person_id}/departments/add
+{
+  "department_id": "dept-uuid"
+}
+
+# Remove person from department  
+DELETE /api/actions/persons/{person_id}/departments/{department_id}
+```
+
+## Password Management
+
+Admins can change passwords for users:
+
+```bash
+POST /api/actions/persons/{person_id}/change-password
+{
+  "password": "newPassword123",
+  "password_2": "newPassword123"
+}
+```
+
+<Note>
+  Admins cannot change passwords for other admin accounts or protected accounts. The system sends an email notification when a password is changed.
+</Note>
+
+## Protected Accounts
+
+Accounts listed in the `PROTECTED_ACCOUNTS` configuration cannot:
+- Have their role changed
+- Be deactivated
+- Have their password changed by other admins (only by themselves)
+
+This protects critical system accounts from accidental modification.
+
+## User Invitations
+
+Invite new users via email:
+
+```bash
+GET /api/actions/persons/{person_id}/invite
+```
+
+Sends an invitation email with a registration link valid for 7 days.
+
+## Avatar Management
+
+Clear a user's avatar:
+
+```bash
+DELETE /api/actions/persons/{person_id}/clear-avatar
+```
+
+## Bot Accounts
+
+Bot accounts (`is_bot: true`) are special service accounts:
+- Can have `null` email addresses
+- Generate an access token on creation
+- Don't count against user limits
+- Can have expiration dates
+
+When creating a bot:
+
+```json
+{
+  "first_name": "API",
+  "last_name": "Bot",
+  "email": null,
+  "is_bot": true,
+  "role": "user"
+}
+```
+
+Response includes an `access_token` for API authentication.
+
+## Permissions
+
+### Read Permissions
+- All authenticated users can view person lists
+- Admins see full details
+- Managers see safe serialization (no sensitive fields)
+- Regular users see minimal information
+
+### Create Permissions
+- Only admins can create persons
+- User limit is checked for active non-bot users
+
+### Update Permissions
+- Users can update their own profile (limited fields)
+- Admins can update any user
+- Protected accounts have restrictions
+- Some fields require admin permissions (role, active, departments)
+
+### Delete Permissions
+- Only admins can delete persons
+- Users cannot delete themselves
+
+## Examples
+
+### Create a New User
+
+```bash
+POST /api/data/persons
+```
+
+```json
+{
+  "first_name": "Jane",
+  "last_name": "Smith",
+  "email": "jane.smith@studio.com",
+  "role": "user",
+  "contract_type": "open-ended",
+  "departments": ["animation-dept-id"],
+  "timezone": "America/Los_Angeles",
+  "locale": "en_US"
+}
+```
+
+### Update User Role
+
+```bash
+PUT /api/data/persons/{person_id}
+```
+
+```json
+{
+  "role": "supervisor",
+  "position": "supervisor",
+  "seniority": "senior"
+}
+```
+
+### Get User Time Spent for Month
+
+```bash
+GET /api/data/persons/{person_id}/time-spents/month/2024/3
+```
+
+```json
+{
+  "total_duration": 173.5,
+  "year": 2024,
+  "month": 3
+}
+```
+
+### Assign User to Department
+
+```bash
+POST /api/actions/persons/{person_id}/departments/add
+```
+
+```json
+{
+  "department_id": "modeling-dept-uuid"
+}
+```
+
+## Related Resources
+
+- [Person Endpoints](/api/people/endpoints#person-endpoints) - Full API reference
+- [Department Management](/api/people/departments) - Department organization
+- [Authentication](/api/auth/login) - Login and authentication

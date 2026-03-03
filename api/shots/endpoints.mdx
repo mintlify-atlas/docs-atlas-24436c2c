@@ -1,0 +1,1204 @@
+---
+title: "Shots & Sequences API Reference"
+description: "Complete endpoint reference for shots, sequences, episodes, and scenes"
+---
+
+## Shots
+
+### Get Shot
+
+Get detailed information for a specific shot.
+
+```http
+GET /api/data/shots/{shot_id}
+```
+
+**Path Parameters:**
+- `shot_id` (uuid, required): Shot ID
+
+**Response:** `200 OK`
+
+```json
+{
+  "id": "shot-uuid",
+  "name": "SH010",
+  "description": "Character enters the room",
+  "nb_frames": 120,
+  "data": {
+    "frame_in": 1001,
+    "frame_out": 1120,
+    "fps": 24
+  },
+  "project_id": "project-uuid",
+  "parent_id": "sequence-uuid",
+  "sequence_id": "sequence-uuid",
+  "sequence_name": "SQ010",
+  "episode_id": "episode-uuid",
+  "episode_name": "EP01",
+  "preview_file_id": "preview-uuid",
+  "tasks": []
+}
+```
+
+### Update Shot
+
+Update shot properties.
+
+```http
+PUT /api/data/shots/{shot_id}
+```
+
+**Path Parameters:**
+- `shot_id` (uuid, required): Shot ID
+
+**Request Body:**
+
+```json
+{
+  "name": "SH010_new",
+  "description": "Updated description",
+  "nb_frames": 150,
+  "data": {
+    "camera": "camA",
+    "cut_in": 1001
+  }
+}
+```
+
+**Response:** `200 OK`
+
+Returns the updated shot object.
+
+### Delete Shot
+
+Delete a shot.
+
+```http
+DELETE /api/data/shots/{shot_id}
+```
+
+**Path Parameters:**
+- `shot_id` (uuid, required): Shot ID
+
+**Query Parameters:**
+- `force` (boolean, optional): Force deletion including tasks
+
+**Response:** `204 No Content`
+
+### Get All Shots
+
+Get all shots with optional filters.
+
+```http
+GET /api/data/shots
+```
+
+**Query Parameters:**
+- `project_id` (uuid, optional): Filter by project
+- `sequence_id` (uuid, optional): Filter by sequence
+- `parent_id` (uuid, optional): Filter by parent entity
+
+**Response:** `200 OK`
+
+```json
+[
+  {
+    "id": "shot-uuid",
+    "name": "SH010",
+    "project_id": "project-uuid",
+    "parent_id": "sequence-uuid",
+    "project_name": "My Project",
+    "sequence_name": "SQ010"
+  }
+]
+```
+
+### Get Shots with Tasks
+
+Get shots with embedded task information.
+
+```http
+GET /api/data/shots/with-tasks
+```
+
+**Query Parameters:**
+- `project_id` (uuid, optional): Filter by project
+- `episode_id` (uuid, optional): Filter by episode
+
+**Response:** `200 OK`
+
+```json
+[
+  {
+    "id": "shot-uuid",
+    "name": "SH010",
+    "nb_frames": 120,
+    "sequence_id": "sequence-uuid",
+    "sequence_name": "SQ010",
+    "episode_id": "episode-uuid",
+    "episode_name": "EP01",
+    "tasks": [
+      {
+        "id": "task-uuid",
+        "task_type_id": "tasktype-uuid",
+        "task_status_id": "status-uuid",
+        "assignees": ["person-uuid"]
+      }
+    ]
+  }
+]
+```
+
+### Create Shot
+
+Create a new shot in a project.
+
+```http
+POST /api/data/projects/{project_id}/shots
+```
+
+**Path Parameters:**
+- `project_id` (uuid, required): Project ID
+
+**Request Body:**
+
+```json
+{
+  "name": "SH010",
+  "sequence_id": "sequence-uuid",
+  "nb_frames": 120,
+  "description": "Character enters the room",
+  "data": {
+    "frame_in": 1001,
+    "frame_out": 1120
+  }
+}
+```
+
+**Response:** `201 Created`
+
+Returns the created shot object.
+
+### Get Project Shots
+
+Get all shots for a project.
+
+```http
+GET /api/data/projects/{project_id}/shots
+```
+
+**Path Parameters:**
+- `project_id` (uuid, required): Project ID
+
+**Response:** `200 OK`
+
+Returns an array of shots.
+
+### Get Shot Assets
+
+Get assets linked to a shot (breakdown/casting).
+
+```http
+GET /api/data/shots/{shot_id}/assets
+```
+
+**Path Parameters:**
+- `shot_id` (uuid, required): Shot ID
+
+**Response:** `200 OK`
+
+```json
+[
+  {
+    "id": "asset-uuid",
+    "name": "Character A",
+    "entity_type_id": "assettype-uuid",
+    "nb_occurences": 1
+  }
+]
+```
+
+### Get Shot Tasks
+
+Get all tasks for a shot.
+
+```http
+GET /api/data/shots/{shot_id}/tasks
+```
+
+**Path Parameters:**
+- `shot_id` (uuid, required): Shot ID
+
+**Query Parameters:**
+- `relations` (boolean, optional): Include task relations
+
+**Response:** `200 OK`
+
+```json
+[
+  {
+    "id": "task-uuid",
+    "entity_id": "shot-uuid",
+    "task_type_id": "tasktype-uuid",
+    "task_status_id": "status-uuid",
+    "assignees": ["person-uuid"],
+    "project_id": "project-uuid"
+  }
+]
+```
+
+### Get Shot Task Types
+
+Get task types associated with a shot.
+
+```http
+GET /api/data/shots/{shot_id}/task-types
+```
+
+**Path Parameters:**
+- `shot_id` (uuid, required): Shot ID
+
+**Response:** `200 OK`
+
+```json
+[
+  {
+    "id": "tasktype-uuid",
+    "name": "Animation",
+    "color": "#3273dc"
+  }
+]
+```
+
+### Get Shot Previews
+
+Get preview files for a shot organized by task type.
+
+```http
+GET /api/data/shots/{shot_id}/preview-files
+```
+
+**Path Parameters:**
+- `shot_id` (uuid, required): Shot ID
+
+**Response:** `200 OK`
+
+```json
+{
+  "tasktype-uuid": [
+    {
+      "id": "preview-uuid",
+      "revision": 3,
+      "file_id": "file-uuid"
+    }
+  ]
+}
+```
+
+### Get Shot Versions
+
+Get data version history for a shot.
+
+```http
+GET /api/data/shots/{shot_id}/versions
+```
+
+**Path Parameters:**
+- `shot_id` (uuid, required): Shot ID
+
+**Response:** `200 OK`
+
+```json
+[
+  {
+    "id": "version-uuid",
+    "created_at": "2024-01-15T10:30:00Z",
+    "data": {}
+  }
+]
+```
+
+## Sequences
+
+### Get Sequence
+
+Get detailed information for a specific sequence.
+
+```http
+GET /api/data/sequences/{sequence_id}
+```
+
+**Path Parameters:**
+- `sequence_id` (uuid, required): Sequence ID
+
+**Response:** `200 OK`
+
+```json
+{
+  "id": "sequence-uuid",
+  "name": "SQ010",
+  "description": "Opening sequence",
+  "parent_id": "episode-uuid",
+  "episode_id": "episode-uuid",
+  "episode_name": "EP01",
+  "project_id": "project-uuid",
+  "project_name": "My Series"
+}
+```
+
+### Delete Sequence
+
+Delete a sequence.
+
+```http
+DELETE /api/data/sequences/{sequence_id}
+```
+
+**Path Parameters:**
+- `sequence_id` (uuid, required): Sequence ID
+
+**Query Parameters:**
+- `force` (boolean, optional): Force deletion including shots
+
+**Response:** `204 No Content`
+
+### Get All Sequences
+
+Get all sequences with optional filters.
+
+```http
+GET /api/data/sequences
+```
+
+**Query Parameters:**
+- `project_id` (uuid, optional): Filter by project
+- `episode_id` (uuid, optional): Filter by episode
+
+**Response:** `200 OK`
+
+```json
+[
+  {
+    "id": "sequence-uuid",
+    "name": "SQ010",
+    "project_id": "project-uuid",
+    "parent_id": "episode-uuid"
+  }
+]
+```
+
+### Get Sequences with Tasks
+
+Get sequences with embedded task information.
+
+```http
+GET /api/data/sequences/with-tasks
+```
+
+**Query Parameters:**
+- `project_id` (uuid, optional): Filter by project
+
+**Response:** `200 OK`
+
+```json
+[
+  {
+    "id": "sequence-uuid",
+    "name": "SQ010",
+    "project_id": "project-uuid",
+    "tasks": []
+  }
+]
+```
+
+### Create Sequence
+
+Create a new sequence in a project.
+
+```http
+POST /api/data/projects/{project_id}/sequences
+```
+
+**Path Parameters:**
+- `project_id` (uuid, required): Project ID
+
+**Request Body:**
+
+```json
+{
+  "name": "SQ010",
+  "episode_id": "episode-uuid",
+  "description": "Opening sequence",
+  "data": {}
+}
+```
+
+**Response:** `201 Created`
+
+Returns the created sequence object.
+
+### Get Project Sequences
+
+Get all sequences for a project.
+
+```http
+GET /api/data/projects/{project_id}/sequences
+```
+
+**Path Parameters:**
+- `project_id` (uuid, required): Project ID
+
+**Response:** `200 OK`
+
+Returns an array of sequences.
+
+### Get Sequence Shots
+
+Get all shots in a sequence.
+
+```http
+GET /api/data/sequences/{sequence_id}/shots
+```
+
+**Path Parameters:**
+- `sequence_id` (uuid, required): Sequence ID
+
+**Response:** `200 OK`
+
+Returns an array of shots.
+
+### Get Sequence Tasks
+
+Get all tasks for a sequence.
+
+```http
+GET /api/data/sequences/{sequence_id}/tasks
+```
+
+**Path Parameters:**
+- `sequence_id` (uuid, required): Sequence ID
+
+**Query Parameters:**
+- `relations` (boolean, optional): Include task relations
+
+**Response:** `200 OK`
+
+Returns an array of tasks.
+
+### Get Sequence Shot Tasks
+
+Get all tasks for all shots in a sequence.
+
+```http
+GET /api/data/sequences/{sequence_id}/shot-tasks
+```
+
+**Path Parameters:**
+- `sequence_id` (uuid, required): Sequence ID
+
+**Query Parameters:**
+- `relations` (boolean, optional): Include task relations
+
+**Response:** `200 OK`
+
+Returns an array of tasks from all shots in the sequence.
+
+### Get Sequence Task Types
+
+Get task types associated with a sequence.
+
+```http
+GET /api/data/sequences/{sequence_id}/task-types
+```
+
+**Path Parameters:**
+- `sequence_id` (uuid, required): Sequence ID
+
+**Response:** `200 OK`
+
+```json
+[
+  {
+    "id": "tasktype-uuid",
+    "name": "Layout"
+  }
+]
+```
+
+### Get Sequence Scenes
+
+Get all scenes in a sequence.
+
+```http
+GET /api/data/sequences/{sequence_id}/scenes
+```
+
+**Path Parameters:**
+- `sequence_id` (uuid, required): Sequence ID
+
+**Response:** `200 OK`
+
+Returns an array of scenes.
+
+## Episodes
+
+### Get Episode
+
+Get detailed information for a specific episode.
+
+```http
+GET /api/data/episodes/{episode_id}
+```
+
+**Path Parameters:**
+- `episode_id` (uuid, required): Episode ID
+
+**Response:** `200 OK`
+
+```json
+{
+  "id": "episode-uuid",
+  "name": "EP01",
+  "description": "Pilot Episode",
+  "status": "running",
+  "project_id": "project-uuid",
+  "project_name": "My Series"
+}
+```
+
+### Delete Episode
+
+Delete an episode.
+
+```http
+DELETE /api/data/episodes/{episode_id}
+```
+
+**Path Parameters:**
+- `episode_id` (uuid, required): Episode ID
+
+**Query Parameters:**
+- `force` (boolean, optional): Force deletion including sequences and shots
+
+**Response:** `204 No Content`
+
+### Get All Episodes
+
+Get all episodes with optional filters.
+
+```http
+GET /api/data/episodes
+```
+
+**Query Parameters:**
+- `project_id` (uuid, optional): Filter by project
+
+**Response:** `200 OK`
+
+```json
+[
+  {
+    "id": "episode-uuid",
+    "name": "EP01",
+    "description": "Pilot Episode",
+    "status": "running",
+    "project_id": "project-uuid"
+  }
+]
+```
+
+### Get Episodes with Tasks
+
+Get episodes with embedded task information.
+
+```http
+GET /api/data/episodes/with-tasks
+```
+
+**Query Parameters:**
+- `project_id` (uuid, optional): Filter by project
+
+**Response:** `200 OK`
+
+```json
+[
+  {
+    "id": "episode-uuid",
+    "name": "EP01",
+    "project_id": "project-uuid",
+    "tasks": []
+  }
+]
+```
+
+### Create Episode
+
+Create a new episode in a project.
+
+```http
+POST /api/data/projects/{project_id}/episodes
+```
+
+**Path Parameters:**
+- `project_id` (uuid, required): Project ID
+
+**Request Body:**
+
+```json
+{
+  "name": "EP01",
+  "description": "Pilot Episode",
+  "status": "running",
+  "data": {}
+}
+```
+
+**Response:** `201 Created`
+
+Returns the created episode object.
+
+### Get Project Episodes
+
+Get all episodes for a project.
+
+```http
+GET /api/data/projects/{project_id}/episodes
+```
+
+**Path Parameters:**
+- `project_id` (uuid, required): Project ID
+
+**Response:** `200 OK`
+
+Returns an array of episodes.
+
+### Get Episode Sequences
+
+Get all sequences in an episode.
+
+```http
+GET /api/data/episodes/{episode_id}/sequences
+```
+
+**Path Parameters:**
+- `episode_id` (uuid, required): Episode ID
+
+**Response:** `200 OK`
+
+Returns an array of sequences.
+
+### Get Episode Shots
+
+Get all shots across all sequences in an episode.
+
+```http
+GET /api/data/episodes/{episode_id}/shots
+```
+
+**Path Parameters:**
+- `episode_id` (uuid, required): Episode ID
+
+**Query Parameters:**
+- `relations` (boolean, optional): Include shot relations
+
+**Response:** `200 OK`
+
+Returns an array of shots.
+
+### Get Episode Tasks
+
+Get all tasks for an episode.
+
+```http
+GET /api/data/episodes/{episode_id}/tasks
+```
+
+**Path Parameters:**
+- `episode_id` (uuid, required): Episode ID
+
+**Response:** `200 OK`
+
+Returns an array of tasks.
+
+### Get Episode Shot Tasks
+
+Get all tasks for all shots in an episode.
+
+```http
+GET /api/data/episodes/{episode_id}/shot-tasks
+```
+
+**Path Parameters:**
+- `episode_id` (uuid, required): Episode ID
+
+**Query Parameters:**
+- `relations` (boolean, optional): Include task relations
+
+**Response:** `200 OK`
+
+Returns an array of tasks from all shots in the episode.
+
+### Get Episode Asset Tasks
+
+Get all asset tasks linked to an episode.
+
+```http
+GET /api/data/episodes/{episode_id}/asset-tasks
+```
+
+**Path Parameters:**
+- `episode_id` (uuid, required): Episode ID
+
+**Query Parameters:**
+- `relations` (boolean, optional): Include task relations
+
+**Response:** `200 OK`
+
+Returns an array of asset tasks.
+
+### Get Episode Task Types
+
+Get task types associated with an episode.
+
+```http
+GET /api/data/episodes/{episode_id}/task-types
+```
+
+**Path Parameters:**
+- `episode_id` (uuid, required): Episode ID
+
+**Response:** `200 OK`
+
+```json
+[
+  {
+    "id": "tasktype-uuid",
+    "name": "Animation"
+  }
+]
+```
+
+## Scenes
+
+### Get Scene
+
+Get detailed information for a specific scene.
+
+```http
+GET /api/data/scenes/{scene_id}
+```
+
+**Path Parameters:**
+- `scene_id` (uuid, required): Scene ID
+
+**Response:** `200 OK`
+
+```json
+{
+  "id": "scene-uuid",
+  "name": "SC001",
+  "parent_id": "sequence-uuid",
+  "sequence_id": "sequence-uuid",
+  "sequence_name": "SQ010",
+  "project_id": "project-uuid",
+  "project_name": "My Project"
+}
+```
+
+### Delete Scene
+
+Delete a scene.
+
+```http
+DELETE /api/data/scenes/{scene_id}
+```
+
+**Path Parameters:**
+- `scene_id` (uuid, required): Scene ID
+
+**Response:** `204 No Content`
+
+### Get All Scenes
+
+Get all scenes with optional filters.
+
+```http
+GET /api/data/scenes/all
+```
+
+**Query Parameters:**
+- `project_id` (uuid, optional): Filter by project
+
+**Response:** `200 OK`
+
+```json
+[
+  {
+    "id": "scene-uuid",
+    "name": "SC001",
+    "project_id": "project-uuid",
+    "parent_id": "sequence-uuid",
+    "project_name": "My Project",
+    "sequence_name": "SQ010"
+  }
+]
+```
+
+### Get Scenes with Tasks
+
+Get scenes with embedded task information.
+
+```http
+GET /api/data/scenes/with-tasks
+```
+
+**Query Parameters:**
+- `project_id` (uuid, optional): Filter by project
+
+**Response:** `200 OK`
+
+```json
+[
+  {
+    "id": "scene-uuid",
+    "name": "SC001",
+    "project_id": "project-uuid",
+    "tasks": []
+  }
+]
+```
+
+### Create Scene
+
+Create a new scene in a project.
+
+```http
+POST /api/data/projects/{project_id}/scenes
+```
+
+**Path Parameters:**
+- `project_id` (uuid, required): Project ID
+
+**Request Body:**
+
+```json
+{
+  "name": "SC001",
+  "sequence_id": "sequence-uuid"
+}
+```
+
+**Response:** `201 Created`
+
+Returns the created scene object.
+
+### Get Project Scenes
+
+Get all scenes for a project.
+
+```http
+GET /api/data/projects/{project_id}/scenes
+```
+
+**Path Parameters:**
+- `project_id` (uuid, required): Project ID
+
+**Response:** `200 OK`
+
+Returns an array of scenes.
+
+### Get Scene Shots
+
+Get all shots linked to a scene.
+
+```http
+GET /api/data/scenes/{scene_id}/shots
+```
+
+**Path Parameters:**
+- `scene_id` (uuid, required): Scene ID
+
+**Response:** `200 OK`
+
+Returns an array of shots.
+
+### Link Shot to Scene
+
+Create a link between a shot and a scene.
+
+```http
+POST /api/data/scenes/{scene_id}/shots
+```
+
+**Path Parameters:**
+- `scene_id` (uuid, required): Scene ID
+
+**Request Body:**
+
+```json
+{
+  "shot_id": "shot-uuid"
+}
+```
+
+**Response:** `201 Created`
+
+```json
+{
+  "scene_id": "scene-uuid",
+  "shot_id": "shot-uuid"
+}
+```
+
+### Unlink Shot from Scene
+
+Remove the link between a shot and a scene.
+
+```http
+DELETE /api/data/scenes/{scene_id}/shots/{shot_id}
+```
+
+**Path Parameters:**
+- `scene_id` (uuid, required): Scene ID
+- `shot_id` (uuid, required): Shot ID
+
+**Response:** `204 No Content`
+
+### Get Scene Tasks
+
+Get all tasks for a scene.
+
+```http
+GET /api/data/scenes/{scene_id}/tasks
+```
+
+**Path Parameters:**
+- `scene_id` (uuid, required): Scene ID
+
+**Response:** `200 OK`
+
+Returns an array of tasks.
+
+### Get Scene Task Types
+
+Get task types associated with a scene.
+
+```http
+GET /api/data/scenes/{scene_id}/task-types
+```
+
+**Path Parameters:**
+- `scene_id` (uuid, required): Scene ID
+
+**Response:** `200 OK`
+
+```json
+[
+  {
+    "id": "tasktype-uuid",
+    "name": "Layout"
+  }
+]
+```
+
+## Statistics
+
+### Get Episode Statistics
+
+Get task statistics by episode, task type, and status.
+
+```http
+GET /api/data/projects/{project_id}/episodes/stats
+```
+
+**Path Parameters:**
+- `project_id` (uuid, required): Project ID
+
+**Response:** `200 OK`
+
+```json
+{
+  "episode-uuid": {
+    "tasktype-uuid": {
+      "status-uuid": {
+        "count": 50,
+        "frames": 6000,
+        "drawings": 1500
+      }
+    }
+  },
+  "all": {
+    "all": {
+      "status-uuid": {
+        "count": 200,
+        "frames": 24000,
+        "drawings": 6000
+      }
+    }
+  }
+}
+```
+
+### Get Episode Retake Statistics
+
+Get retake statistics by episode.
+
+```http
+GET /api/data/projects/{project_id}/episodes/retake-stats
+```
+
+**Path Parameters:**
+- `project_id` (uuid, required): Project ID
+
+**Response:** `200 OK`
+
+```json
+{
+  "episode-uuid": {
+    "max_retake_count": 4,
+    "done": {
+      "count": 197,
+      "frames": 16090,
+      "drawings": 16090
+    },
+    "retake": {
+      "count": 0,
+      "frames": 0,
+      "drawings": 0
+    },
+    "evolution": {
+      "1": {
+        "retake": {
+          "count": 80,
+          "frames": 7900
+        },
+        "done": {
+          "count": 117,
+          "frames": 3900
+        }
+      }
+    }
+  }
+}
+```
+
+## Quotas
+
+### Get Project Quotas
+
+Get quota statistics for a project and task type.
+
+```http
+GET /api/data/projects/{project_id}/quotas/{task_type_id}
+```
+
+**Path Parameters:**
+- `project_id` (uuid, required): Project ID
+- `task_type_id` (uuid, required): Task type ID
+
+**Query Parameters:**
+- `count_mode` (string, required): One of `weighted`, `weighteddone`, `feedback`, `done`
+- `studio_id` (uuid, optional): Filter by studio
+
+**Response:** `200 OK`
+
+```json
+{
+  "person-uuid": {
+    "day": {
+      "frames": {
+        "2024-01-15": 120
+      },
+      "count": {
+        "2024-01-15": 5
+      }
+    },
+    "week": {
+      "frames": {
+        "2024-3": 600
+      }
+    },
+    "month": {
+      "frames": {
+        "2024-01": 2400
+      }
+    }
+  },
+  "total": {
+    "day": {},
+    "week": {},
+    "month": {}
+  }
+}
+```
+
+### Get Person Quotas
+
+Get quota statistics for a specific person in a project.
+
+```http
+GET /api/data/projects/{project_id}/quotas/persons/{person_id}
+```
+
+**Path Parameters:**
+- `project_id` (uuid, required): Project ID
+- `person_id` (uuid, required): Person ID
+
+**Query Parameters:**
+- `count_mode` (string, required): One of `weighted`, `weighteddone`, `feedback`, `done`
+- `studio_id` (uuid, optional): Filter by studio
+
+**Response:** `200 OK`
+
+Returns quota statistics organized by task type.
+
+## Common Patterns
+
+### Getting Full Shot Data
+
+```http
+GET /api/data/shots/{shot_id}
+```
+
+Returns shot with sequence name, episode name, and tasks.
+
+### Getting Hierarchy
+
+For TV series:
+```
+GET /api/data/projects/{project_id}/episodes
+GET /api/data/episodes/{episode_id}/sequences
+GET /api/data/sequences/{sequence_id}/shots
+```
+
+For films:
+```
+GET /api/data/projects/{project_id}/sequences
+GET /api/data/sequences/{sequence_id}/shots
+```
+
+### Batch Operations
+
+Use the `with-tasks` endpoints to get entities with their tasks in a single request:
+
+```http
+GET /api/data/shots/with-tasks?project_id={project_id}
+GET /api/data/sequences/with-tasks?project_id={project_id}
+GET /api/data/episodes/with-tasks?project_id={project_id}
+```
+
+## Error Responses
+
+All endpoints may return standard error responses:
+
+- `400 Bad Request`: Invalid parameters or request body
+- `401 Unauthorized`: Missing or invalid authentication
+- `403 Forbidden`: Insufficient permissions
+- `404 Not Found`: Entity not found
+- `500 Internal Server Error`: Server error
+
+## Next Steps
+
+- [Shots & Sequences Overview](/api/shots/overview) - Understand the hierarchy
+- [Sequence Management](/api/shots/sequences) - Detailed sequence operations
+- [Tasks API](/api/tasks/overview) - Managing work on shots

@@ -1,0 +1,486 @@
+---
+title: Task Status
+description: Manage task workflow states and status automations
+---
+
+## Introduction
+
+Task statuses define the workflow states that tasks move through during production. Each status has properties that control behavior, permissions, and automation triggers. Statuses can be configured for standard production tasks or specialized for concept work.
+
+## Task Status Structure
+
+### Model Fields
+
+```json
+{
+  "id": "a24a6ea4-ce75-4665-a070-57453082c25",
+  "name": "Work In Progress",
+  "short_name": "wip",
+  "description": "Task is being actively worked on",
+  "color": "#3498db",
+  "priority": 3,
+  "is_done": false,
+  "is_artist_allowed": true,
+  "is_client_allowed": false,
+  "is_retake": false,
+  "is_feedback_request": false,
+  "is_default": false,
+  "is_wip": true,
+  "for_concept": false,
+  "archived": false,
+  "shotgun_id": null,
+  "created_at": "2024-01-10T09:00:00Z",
+  "updated_at": "2024-01-10T09:00:00Z"
+}
+```
+
+### Field Descriptions
+
+- **name**: Display name (e.g., "Work In Progress", "Waiting for Approval")
+- **short_name**: Abbreviated code for UI (e.g., "wip", "wfa", "done")
+- **description**: Explanation of what this status means
+- **color**: Hex color for visual identification (#RRGGBB format)
+- **priority**: Display order (lower numbers shown first)
+- **is_done**: Marks task as completed
+- **is_artist_allowed**: Artists can set tasks to this status
+- **is_client_allowed**: Clients can set tasks to this status
+- **is_retake**: Marks task as requiring rework
+- **is_feedback_request**: Marks task as submitted for review
+- **is_default**: Used as initial status for new tasks
+- **is_wip**: Marks task as actively in progress
+- **for_concept**: Status is for concept tasks only
+- **archived**: Hidden from active use when true
+
+## Standard Task Statuses
+
+Common production workflow statuses:
+
+### Todo
+```json
+{
+  "name": "Todo",
+  "short_name": "todo",
+  "color": "#f5f5f5",
+  "is_default": true,
+  "is_artist_allowed": true,
+  "is_client_allowed": false
+}
+```
+
+Initial status for new tasks. Indicates work has not started.
+
+### Work In Progress (WIP)
+```json
+{
+  "name": "Work In Progress",
+  "short_name": "wip",
+  "color": "#3498db",
+  "is_wip": true,
+  "is_artist_allowed": true,
+  "is_client_allowed": false
+}
+```
+
+Task is being actively worked on. Sets `real_start_date` on first transition to WIP.
+
+### Waiting for Approval
+```json
+{
+  "name": "Waiting for Approval",
+  "short_name": "wfa",
+  "color": "#f39c12",
+  "is_feedback_request": true,
+  "is_artist_allowed": true,
+  "is_client_allowed": false
+}
+```
+
+Task submitted for supervisor/client review. Sets `end_date` on transition.
+
+### Retake
+```json
+{
+  "name": "Retake",
+  "short_name": "retake",
+  "color": "#ff3860",
+  "is_retake": true,
+  "is_artist_allowed": false,
+  "is_client_allowed": false
+}
+```
+
+Task rejected and needs rework. Increments `retake_count` on transition.
+
+### Done
+```json
+{
+  "name": "Done",
+  "short_name": "done",
+  "color": "#22d160",
+  "is_done": true,
+  "is_artist_allowed": false,
+  "is_client_allowed": false
+}
+```
+
+Task completed and approved. Sets `done_date` on transition.
+
+## Concept Task Statuses
+
+For concept and pre-production work, use specialized statuses with `for_concept: true`:
+
+### Neutral
+```json
+{
+  "name": "Neutral",
+  "short_name": "neutral",
+  "color": "#CCCCCC",
+  "is_default": true,
+  "for_concept": true
+}
+```
+
+Default status for concept tasks.
+
+### To Review
+```json
+{
+  "name": "To Review",
+  "short_name": "pndng",
+  "color": "#f39c12",
+  "is_feedback_request": true,
+  "for_concept": true
+}
+```
+
+Concept submitted for review.
+
+### Approved/Rejected
+```json
+[
+  {
+    "name": "Approved",
+    "short_name": "approved",
+    "color": "#22d160",
+    "is_done": true,
+    "for_concept": true
+  },
+  {
+    "name": "Rejected",
+    "short_name": "rejected",
+    "color": "#ff3860",
+    "is_retake": true,
+    "for_concept": true
+  }
+]
+```
+
+## Status Behavior Flags
+
+### is_done
+
+Marks the task as completed:
+
+- Sets `done_date` when transitioning to this status
+- Excludes task from active work queries
+- Used in completion statistics
+- Typically restricted from artist access
+
+### is_feedback_request
+
+Indicates task is submitted for review:
+
+- Sets `end_date` on first transition to this status
+- Triggers review notifications
+- Used to filter tasks requiring feedback
+- Often allows artist access for submissions
+
+### is_retake
+
+Marks task as requiring rework:
+
+- Increments `retake_count` on transition from non-retake status
+- Tracks quality and iteration metrics
+- Usually supervisor/manager only
+
+### is_wip
+
+Indicates active work:
+
+- Sets `real_start_date` on first transition to WIP status
+- Distinguishes planned vs actively worked tasks
+- Used for capacity and workload tracking
+
+### is_default
+
+Used as initial status for new tasks:
+
+- Only one default status per concept/standard type
+- Standard tasks use "Todo" as default
+- Concept tasks use "Neutral" as default
+
+### is_artist_allowed
+
+Controls artist permissions:
+
+- When `true`: Artists can set tasks to this status
+- When `false`: Only supervisors/managers can set this status
+- Use for final approval statuses (Done, Retake)
+
+### is_client_allowed
+
+Controls client permissions:
+
+- When `true`: Clients can set tasks to this status
+- When `false`: Clients cannot set this status
+- Useful for client review workflows
+
+## Managing Task Statuses
+
+### Create or Get Status
+
+```python
+from zou.app.services import tasks_service
+
+status = tasks_service.get_or_create_status(
+    name="Work In Progress",
+    short_name="wip",
+    color="#3498db",
+    is_wip=True,
+    is_artist_allowed=True,
+    is_client_allowed=False
+)
+```
+
+For concept-specific status:
+
+```python
+status = tasks_service.get_or_create_status(
+    name="To Review",
+    short_name="pndng",
+    color="#f39c12",
+    is_feedback_request=True,
+    for_concept=True
+)
+```
+
+### List All Statuses
+
+```python
+statuses = tasks_service.get_task_statuses()
+```
+
+Or via REST:
+
+```
+GET /api/data/task-status
+```
+
+### Get Status Details
+
+```python
+status = tasks_service.get_task_status(status_id)
+```
+
+### Update Status
+
+```python
+status = tasks_service.update_task_status(status_id, {
+    "color": "#3498db",
+    "priority": 2,
+    "description": "Updated description"
+})
+```
+
+Or via REST:
+
+```
+PUT /api/data/task-status/{status_id}
+```
+
+```json
+{
+  "color": "#3498db",
+  "priority": 2
+}
+```
+
+## Status Automation
+
+Status changes trigger automatic task field updates:
+
+### Real Start Date
+
+When a task transitions to a WIP status for the first time:
+
+```python
+if new_status.is_wip and task.real_start_date is None:
+    task.real_start_date = datetime.utcnow()
+```
+
+### End Date
+
+When a task transitions to a feedback request status for the first time:
+
+```python
+if new_status.is_feedback_request and task.end_date is None:
+    task.end_date = datetime.utcnow()
+```
+
+### Done Date
+
+When a task transitions to a done status:
+
+```python
+if new_status.is_done:
+    task.done_date = datetime.utcnow()
+```
+
+### Retake Count
+
+When transitioning from non-retake to retake status:
+
+```python
+if new_status.is_retake and not previous_status.is_retake:
+    task.retake_count += 1
+```
+
+## Status Filtering
+
+### Get Tasks by Status
+
+Query open tasks filtered by status:
+
+```
+GET /api/data/tasks/open-tasks?task_status_id={status_id}
+```
+
+### Get Tasks Requiring Feedback
+
+Find all tasks in feedback request status:
+
+```python
+from zou.app.services import tasks_service
+
+tasks = tasks_service.get_person_tasks_to_check(
+    project_ids=["project-id"],
+    department_ids=["dept-id"]
+)
+```
+
+This returns tasks with `is_feedback_request=True` statuses.
+
+### Get Done Tasks
+
+Retrieve completed tasks for a person:
+
+```
+GET /api/data/persons/{person_id}/done-tasks
+```
+
+Filters tasks with `is_done=True` statuses.
+
+## Workflow Examples
+
+### Standard Production Flow
+
+```
+Todo → WIP → Waiting for Approval → Done
+```
+
+1. Task created with "Todo" status
+2. Artist starts work, sets to "WIP" (sets `real_start_date`)
+3. Artist completes work, sets to "Waiting for Approval" (sets `end_date`)
+4. Supervisor approves, sets to "Done" (sets `done_date`)
+
+### Retake Flow
+
+```
+WIP → Waiting for Approval → Retake → WIP → Waiting for Approval → Done
+```
+
+1. Task submitted for review with "Waiting for Approval"
+2. Supervisor finds issues, sets to "Retake" (increments `retake_count`)
+3. Artist fixes issues, sets back to "WIP"
+4. Artist resubmits with "Waiting for Approval"
+5. Supervisor approves, sets to "Done"
+
+### Concept Review Flow
+
+```
+Neutral → To Review → Approved
+```
+
+or
+
+```
+Neutral → To Review → Rejected → To Review → Approved
+```
+
+## Priority and Ordering
+
+Use the `priority` field to control status display order:
+
+```json
+[
+  {"name": "Todo", "priority": 1},
+  {"name": "WIP", "priority": 2},
+  {"name": "Waiting for Approval", "priority": 3},
+  {"name": "Retake", "priority": 4},
+  {"name": "Done", "priority": 5}
+]
+```
+
+Lower priority numbers appear first in UI status lists.
+
+## Best Practices
+
+### Naming Conventions
+
+- Use clear, action-oriented names
+- **short_name** should be 2-10 characters
+- Keep naming consistent across projects
+
+### Color Coding
+
+- Gray/White: Not started (Todo, Neutral)
+- Blue: In progress (WIP)
+- Yellow/Orange: Review needed (Waiting for Approval)
+- Red: Issues/Retakes
+- Green: Completed (Done, Approved)
+
+### Permission Configuration
+
+- `is_artist_allowed=true`: Todo, WIP, Waiting for Approval
+- `is_artist_allowed=false`: Done, Retake (supervisor only)
+- `is_client_allowed=true`: Rarely used, mostly for client review statuses
+
+### Automation Flags
+
+Enable automation flags carefully:
+
+- One `is_default=true` status for standard tasks
+- One `is_default=true, for_concept=true` status for concepts
+- `is_wip=true` for primary working status
+- `is_feedback_request=true` for review status
+- `is_retake=true` for rejection status
+- `is_done=true` for completion status
+
+### Archiving
+
+Archive instead of deleting statuses to preserve history:
+
+```json
+{
+  "archived": true
+}
+```
+
+Archived statuses remain on existing tasks but don't appear in new task status selection.
+
+## Related Resources
+
+- [Tasks Overview](/api/tasks/overview) - Task lifecycle and workflow
+- [Task Types](/api/tasks/task-types) - Task categorization
+- [Task Endpoints](/api/tasks/endpoints) - Complete API reference
+- [Comments API](/api/comments/overview) - Status change comments

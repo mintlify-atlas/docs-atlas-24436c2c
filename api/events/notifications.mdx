@@ -1,0 +1,665 @@
+---
+title: Notifications
+description: Manage user notifications for comments, task assignments, and mentions
+---
+
+Kitsu's notification system keeps users informed about comments, mentions, task assignments, and replies on tasks they're involved with.
+
+## Notification Types
+
+Notifications are created automatically for various events:
+
+- `comment` - New comment on a subscribed task
+- `mention` - User mentioned in a comment
+- `reply` - Reply to a comment thread
+- `reply-mention` - User mentioned in a reply
+- `assignation` - Task assigned to user
+- `playlist-ready` - Playlist ready for client review
+
+## Get User Notifications
+
+<EndpointCard
+  method="GET"
+  path="/data/user/notifications"
+  title="Get current user's notifications"
+>
+  Retrieve the last 100 notifications for the authenticated user with optional filtering.
+</EndpointCard>
+
+### Query Parameters
+
+<ParamField query="after" type="string">
+  Filter notifications created after this date (ISO 8601 format)
+</ParamField>
+
+<ParamField query="before" type="string">
+  Filter notifications created before this date (ISO 8601 format)
+</ParamField>
+
+<ParamField query="task_type_id" type="string">
+  Filter by task type UUID
+</ParamField>
+
+<ParamField query="task_status_id" type="string">
+  Filter by task status UUID
+</ParamField>
+
+<ParamField query="type" type="string">
+  Filter by notification type (comment, mention, reply, assignation, etc.)
+</ParamField>
+
+<ParamField query="read" type="boolean">
+  Filter by read status (true for read, false for unread)
+</ParamField>
+
+<ParamField query="watching" type="boolean">
+  Filter by watching status
+</ParamField>
+
+### Example Requests
+
+<CodeGroup>
+```bash cURL
+curl -X GET "https://your-kitsu-instance.com/api/data/user/notifications?read=false" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://your-kitsu-instance.com/api/data/user/notifications?read=false',
+  {
+    headers: {
+      'Authorization': 'Bearer YOUR_JWT_TOKEN'
+    }
+  }
+);
+const notifications = await response.json();
+console.log('Unread notifications:', notifications);
+```
+
+```python Python
+import requests
+
+response = requests.get(
+    'https://your-kitsu-instance.com/api/data/user/notifications',
+    params={'read': False},
+    headers={'Authorization': 'Bearer YOUR_JWT_TOKEN'}
+)
+notifications = response.json()
+print(f"Unread notifications: {len(notifications)}")
+```
+</CodeGroup>
+
+### Response
+
+<ResponseField name="notifications" type="array">
+  Array of notification objects
+  
+  <ResponseField name="id" type="string">
+    Notification UUID
+  </ResponseField>
+  
+  <ResponseField name="type" type="string">
+    Notification type (comment, mention, reply, assignation, etc.)
+  </ResponseField>
+  
+  <ResponseField name="read" type="boolean">
+    Whether the notification has been read
+  </ResponseField>
+  
+  <ResponseField name="change" type="boolean">
+    Whether this notification represents a status change
+  </ResponseField>
+  
+  <ResponseField name="author_id" type="string">
+    UUID of the person who triggered the notification
+  </ResponseField>
+  
+  <ResponseField name="person_id" type="string">
+    UUID of the notification recipient
+  </ResponseField>
+  
+  <ResponseField name="comment_id" type="string">
+    UUID of the related comment (if applicable)
+  </ResponseField>
+  
+  <ResponseField name="reply_id" type="string">
+    UUID of the related reply (if applicable)
+  </ResponseField>
+  
+  <ResponseField name="task_id" type="string">
+    UUID of the related task
+  </ResponseField>
+  
+  <ResponseField name="playlist_id" type="string">
+    UUID of the related playlist (for playlist-ready notifications)
+  </ResponseField>
+  
+  <ResponseField name="created_at" type="string">
+    Notification creation timestamp (ISO 8601)
+  </ResponseField>
+  
+  <ResponseField name="updated_at" type="string">
+    Last update timestamp (ISO 8601)
+  </ResponseField>
+</ResponseField>
+
+```json Example Response
+[
+  {
+    "id": "a24a6ea4-ce75-4665-a070-57453082c25",
+    "type": "comment",
+    "read": false,
+    "change": false,
+    "author_id": "b35b7fb5-df86-5776-b181-68564193d36",
+    "person_id": "c46c8gc6-eg97-6887-c292-79675204e47",
+    "comment_id": "d57d9hd7-fh08-7998-d403-80786315f58",
+    "reply_id": null,
+    "task_id": "e68e0ie8-gi19-8009-e514-91897426g69",
+    "playlist_id": null,
+    "created_at": "2024-01-15T10:30:00Z",
+    "updated_at": "2024-01-15T10:30:00Z"
+  },
+  {
+    "id": "f79f1jf9-hj20-9010-f625-a09008537h80",
+    "type": "mention",
+    "read": true,
+    "change": false,
+    "author_id": "g80g2kg0-ik31-0121-g736-b10119648i91",
+    "person_id": "c46c8gc6-eg97-6887-c292-79675204e47",
+    "comment_id": "h91h3lh1-jl42-1232-h847-c21220759j02",
+    "reply_id": null,
+    "task_id": "i02i4mi2-km53-2343-i958-d32331860k13",
+    "playlist_id": null,
+    "created_at": "2024-01-15T09:15:00Z",
+    "updated_at": "2024-01-15T10:00:00Z"
+  }
+]
+```
+
+## Get Specific Notification
+
+<EndpointCard
+  method="GET"
+  path="/data/user/notifications/{notification_id}"
+  title="Get notification details"
+>
+  Retrieve a specific notification by ID. Only returns notifications belonging to the authenticated user.
+</EndpointCard>
+
+### Path Parameters
+
+<ParamField path="notification_id" type="string" required>
+  UUID of the notification
+</ParamField>
+
+### Example Request
+
+```bash cURL
+curl -X GET "https://your-kitsu-instance.com/api/data/user/notifications/a24a6ea4-ce75-4665-a070-57453082c25" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+### Response
+
+```json
+{
+  "id": "a24a6ea4-ce75-4665-a070-57453082c25",
+  "type": "comment",
+  "read": false,
+  "change": false,
+  "author_id": "b35b7fb5-df86-5776-b181-68564193d36",
+  "person_id": "c46c8gc6-eg97-6887-c292-79675204e47",
+  "comment_id": "d57d9hd7-fh08-7998-d403-80786315f58",
+  "task_id": "e68e0ie8-gi19-8009-e514-91897426g69",
+  "created_at": "2024-01-15T10:30:00Z",
+  "updated_at": "2024-01-15T10:30:00Z"
+}
+```
+
+## Update Notification
+
+<EndpointCard
+  method="PUT"
+  path="/data/user/notifications/{notification_id}"
+  title="Mark notification as read/unread"
+>
+  Update a notification's read status.
+</EndpointCard>
+
+### Path Parameters
+
+<ParamField path="notification_id" type="string" required>
+  UUID of the notification
+</ParamField>
+
+### Request Body
+
+<ParamField body="read" type="boolean" required>
+  Mark notification as read (true) or unread (false)
+</ParamField>
+
+### Example Requests
+
+<CodeGroup>
+```bash cURL
+curl -X PUT "https://your-kitsu-instance.com/api/data/user/notifications/a24a6ea4-ce75-4665-a070-57453082c25" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"read": true}'
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://your-kitsu-instance.com/api/data/user/notifications/a24a6ea4-ce75-4665-a070-57453082c25',
+  {
+    method: 'PUT',
+    headers: {
+      'Authorization': 'Bearer YOUR_JWT_TOKEN',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ read: true })
+  }
+);
+const notification = await response.json();
+console.log('Notification marked as read');
+```
+
+```python Python
+import requests
+
+response = requests.put(
+    'https://your-kitsu-instance.com/api/data/user/notifications/a24a6ea4-ce75-4665-a070-57453082c25',
+    headers={'Authorization': 'Bearer YOUR_JWT_TOKEN'},
+    json={'read': True}
+)
+notification = response.json()
+print('Notification marked as read')
+```
+</CodeGroup>
+
+### Response
+
+```json
+{
+  "id": "a24a6ea4-ce75-4665-a070-57453082c25",
+  "type": "comment",
+  "read": true,
+  "change": false,
+  "author_id": "b35b7fb5-df86-5776-b181-68564193d36",
+  "person_id": "c46c8gc6-eg97-6887-c292-79675204e47",
+  "comment_id": "d57d9hd7-fh08-7998-d403-80786315f58",
+  "task_id": "e68e0ie8-gi19-8009-e514-91897426g69",
+  "created_at": "2024-01-15T10:30:00Z",
+  "updated_at": "2024-01-15T11:00:00Z"
+}
+```
+
+## Mark All Notifications as Read
+
+<EndpointCard
+  method="POST"
+  path="/actions/user/notifications/mark-all-as-read"
+  title="Mark all notifications as read"
+>
+  Mark all of the authenticated user's notifications as read in a single operation.
+</EndpointCard>
+
+### Example Requests
+
+<CodeGroup>
+```bash cURL
+curl -X POST "https://your-kitsu-instance.com/api/actions/user/notifications/mark-all-as-read" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://your-kitsu-instance.com/api/actions/user/notifications/mark-all-as-read',
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer YOUR_JWT_TOKEN'
+    }
+  }
+);
+const result = await response.json();
+console.log('All notifications marked as read');
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    'https://your-kitsu-instance.com/api/actions/user/notifications/mark-all-as-read',
+    headers={'Authorization': 'Bearer YOUR_JWT_TOKEN'}
+)
+result = response.json()
+print('All notifications marked as read')
+```
+</CodeGroup>
+
+### Response
+
+```json
+{
+  "success": true
+}
+```
+
+## Task Subscriptions
+
+Users can subscribe to tasks to receive notifications about comments and changes.
+
+### Check Task Subscription
+
+<EndpointCard
+  method="GET"
+  path="/data/user/tasks/{task_id}/subscribed"
+  title="Check if subscribed to task"
+>
+  Check whether the authenticated user is subscribed to a specific task.
+</EndpointCard>
+
+#### Path Parameters
+
+<ParamField path="task_id" type="string" required>
+  UUID of the task
+</ParamField>
+
+```bash cURL
+curl -X GET "https://your-kitsu-instance.com/api/data/user/tasks/e68e0ie8-gi19-8009-e514-91897426g69/subscribed" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+```json Response
+{
+  "subscribed": true
+}
+```
+
+### Subscribe to Task
+
+<EndpointCard
+  method="POST"
+  path="/actions/user/tasks/{task_id}/subscribe"
+  title="Subscribe to task notifications"
+>
+  Subscribe to a task to receive notifications for all comments posted on it.
+</EndpointCard>
+
+#### Path Parameters
+
+<ParamField path="task_id" type="string" required>
+  UUID of the task to subscribe to
+</ParamField>
+
+<CodeGroup>
+```bash cURL
+curl -X POST "https://your-kitsu-instance.com/api/actions/user/tasks/e68e0ie8-gi19-8009-e514-91897426g69/subscribe" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://your-kitsu-instance.com/api/actions/user/tasks/e68e0ie8-gi19-8009-e514-91897426g69/subscribe',
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer YOUR_JWT_TOKEN'
+    }
+  }
+);
+const subscription = await response.json();
+console.log('Subscribed to task');
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    'https://your-kitsu-instance.com/api/actions/user/tasks/e68e0ie8-gi19-8009-e514-91897426g69/subscribe',
+    headers={'Authorization': 'Bearer YOUR_JWT_TOKEN'}
+)
+subscription = response.json()
+print('Subscribed to task')
+```
+</CodeGroup>
+
+#### Response
+
+```json
+{
+  "id": "j13j5nj3-ln64-3454-j069-e43442971l24",
+  "person_id": "c46c8gc6-eg97-6887-c292-79675204e47",
+  "task_id": "e68e0ie8-gi19-8009-e514-91897426g69",
+  "entity_id": null,
+  "task_type_id": null,
+  "created_at": "2024-01-15T11:00:00Z",
+  "updated_at": "2024-01-15T11:00:00Z"
+}
+```
+
+### Unsubscribe from Task
+
+<EndpointCard
+  method="DELETE"
+  path="/actions/user/tasks/{task_id}/unsubscribe"
+  title="Unsubscribe from task notifications"
+>
+  Remove subscription from a task. The user will no longer receive notifications for this task.
+</EndpointCard>
+
+#### Path Parameters
+
+<ParamField path="task_id" type="string" required>
+  UUID of the task to unsubscribe from
+</ParamField>
+
+<CodeGroup>
+```bash cURL
+curl -X DELETE "https://your-kitsu-instance.com/api/actions/user/tasks/e68e0ie8-gi19-8009-e514-91897426g69/unsubscribe" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://your-kitsu-instance.com/api/actions/user/tasks/e68e0ie8-gi19-8009-e514-91897426g69/unsubscribe',
+  {
+    method: 'DELETE',
+    headers: {
+      'Authorization': 'Bearer YOUR_JWT_TOKEN'
+    }
+  }
+);
+console.log('Unsubscribed from task');
+```
+
+```python Python
+import requests
+
+response = requests.delete(
+    'https://your-kitsu-instance.com/api/actions/user/tasks/e68e0ie8-gi19-8009-e514-91897426g69/unsubscribe',
+    headers={'Authorization': 'Bearer YOUR_JWT_TOKEN'}
+)
+print('Unsubscribed from task')
+```
+</CodeGroup>
+
+#### Response
+
+Returns HTTP 204 No Content on success.
+
+## Sequence Subscriptions
+
+Subscribe to all tasks of a specific type within a sequence.
+
+### Check Sequence Subscription
+
+<EndpointCard
+  method="GET"
+  path="/data/user/entities/{sequence_id}/task-types/{task_type_id}/subscribed"
+  title="Check sequence subscription"
+>
+  Check if subscribed to all tasks of a specific type in a sequence.
+</EndpointCard>
+
+#### Path Parameters
+
+<ParamField path="sequence_id" type="string" required>
+  UUID of the sequence
+</ParamField>
+
+<ParamField path="task_type_id" type="string" required>
+  UUID of the task type
+</ParamField>
+
+```bash cURL
+curl -X GET "https://your-kitsu-instance.com/api/data/user/entities/k24k6ok4-mo75-4565-k170-f54553082m35/task-types/l35l7pl5-np86-5676-l281-g65664193n46/subscribed" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+### Subscribe to Sequence
+
+<EndpointCard
+  method="POST"
+  path="/actions/user/sequences/{sequence_id}/task-types/{task_type_id}/subscribe"
+  title="Subscribe to sequence tasks"
+>
+  Subscribe to all tasks of a specific type within a sequence.
+</EndpointCard>
+
+#### Path Parameters
+
+<ParamField path="sequence_id" type="string" required>
+  UUID of the sequence
+</ParamField>
+
+<ParamField path="task_type_id" type="string" required>
+  UUID of the task type
+</ParamField>
+
+```bash cURL
+curl -X POST "https://your-kitsu-instance.com/api/actions/user/sequences/k24k6ok4-mo75-4565-k170-f54553082m35/task-types/l35l7pl5-np86-5676-l281-g65664193n46/subscribe" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+### Unsubscribe from Sequence
+
+<EndpointCard
+  method="DELETE"
+  path="/actions/user/sequences/{sequence_id}/task-types/{task_type_id}/unsubscribe"
+  title="Unsubscribe from sequence tasks"
+>
+  Remove subscription from all tasks of a specific type within a sequence.
+</EndpointCard>
+
+```bash cURL
+curl -X DELETE "https://your-kitsu-instance.com/api/actions/user/sequences/k24k6ok4-mo75-4565-k170-f54553082m35/task-types/l35l7pl5-np86-5676-l281-g65664193n46/unsubscribe" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+### Get Sequence Subscriptions
+
+<EndpointCard
+  method="GET"
+  path="/data/user/projects/{project_id}/task-types/{task_type_id}/sequence-subscriptions"
+  title="List sequence subscriptions"
+>
+  Get all sequence subscriptions for a project and task type.
+</EndpointCard>
+
+#### Path Parameters
+
+<ParamField path="project_id" type="string" required>
+  UUID of the project
+</ParamField>
+
+<ParamField path="task_type_id" type="string" required>
+  UUID of the task type
+</ParamField>
+
+```bash cURL
+curl -X GET "https://your-kitsu-instance.com/api/data/user/projects/m46m8qm6-oq97-6787-m392-h76775204o57/task-types/l35l7pl5-np86-5676-l281-g65664193n46/sequence-subscriptions" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+```json Response
+[
+  "k24k6ok4-mo75-4565-k170-f54553082m35",
+  "n57n9rn7-pr08-7898-n403-i87886315p68"
+]
+```
+
+## Real-time Notification Events
+
+When a new notification is created, a real-time event is emitted through the WebSocket event stream:
+
+```javascript
+import io from 'socket.io-client';
+
+const socket = io('https://your-kitsu-instance.com', {
+  path: '/socket.io',
+  transports: ['websocket'],
+  auth: { token: 'YOUR_JWT_TOKEN' }
+});
+
+socket.on('notification:new', (data) => {
+  console.log('New notification:', data);
+  // data contains: { notification_id, person_id }
+  
+  // Fetch full notification details
+  fetchNotification(data.notification_id);
+});
+
+socket.on('notification:all-read', (data) => {
+  console.log('All notifications marked as read for user:', data.person_id);
+  // Update UI to reflect all notifications as read
+});
+```
+
+See the [Event Stream](/api/events/event-stream) documentation for more details on WebSocket connections.
+
+## How Notifications Are Created
+
+### Comment Notifications
+
+When a comment is posted on a task:
+1. All users assigned to the task receive a notification
+2. All users subscribed to the task receive a notification
+3. All users subscribed to the parent sequence (if applicable) receive a notification
+4. The comment author does not receive a notification
+
+### Mention Notifications
+
+When a user is @mentioned in a comment or reply:
+1. The mentioned user receives a `mention` or `reply-mention` notification
+2. An email is sent to the mentioned user (if email notifications are enabled)
+
+### Assignment Notifications
+
+When a task is assigned:
+1. Each assigned user receives an `assignation` notification
+2. An email is sent to the assigned users (if email notifications are enabled)
+3. The assigner does not receive a notification for their own assignment
+
+### Playlist Ready Notifications
+
+When a playlist is marked as ready for client review:
+1. All clients with access to the project receive a `playlist-ready` notification
+2. Optionally filtered by studio and/or department
+3. An email is sent to notify clients
+
+## Best Practices
+
+1. **Poll for New Notifications**: If not using WebSockets, poll the `/data/user/notifications?read=false` endpoint periodically (e.g., every 30-60 seconds) to check for new notifications.
+
+2. **Mark as Read Promptly**: When a user views a notification or the related content, mark it as read to keep the notification list clean.
+
+3. **Use Bulk Operations**: Use the mark-all-as-read endpoint when appropriate rather than updating notifications one by one.
+
+4. **Filter Intelligently**: Use query parameters to fetch only relevant notifications based on context (e.g., only unread, specific task type).
+
+5. **Subscribe to Relevant Tasks**: Encourage users to subscribe to tasks they're interested in to stay informed without being overwhelmed.
+
+6. **WebSocket Integration**: Use the WebSocket event stream for real-time notification delivery in the UI for the best user experience.

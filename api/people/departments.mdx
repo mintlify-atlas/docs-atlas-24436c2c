@@ -1,0 +1,384 @@
+---
+title: Department Management
+description: Organize teams and resources by department in Zou
+---
+
+## Overview
+
+Departments represent the organizational structure of your studio, such as Modeling, Animation, Rigging, Lighting, etc. Each department can have:
+
+- Team members (persons)
+- Associated software licenses
+- Hardware resources
+- Unique color for visual identification
+
+## Department Fields
+
+<ResponseField name="id" type="string" format="uuid">
+  Unique identifier for the department
+</ResponseField>
+
+<ResponseField name="name" type="string" required>
+  Department name (must be unique)
+</ResponseField>
+
+<ResponseField name="color" type="string" required>
+  Color in hex format for visual identification (e.g., "#FF5733")
+</ResponseField>
+
+<ResponseField name="archived" type="boolean" default="false">
+  Whether the department is archived
+</ResponseField>
+
+<ResponseField name="created_at" type="string" format="date-time">
+  Creation timestamp
+</ResponseField>
+
+<ResponseField name="updated_at" type="string" format="date-time">
+  Last update timestamp
+</ResponseField>
+
+## Department-Person Relationship
+
+Persons (users) can belong to multiple departments, and departments can have multiple members. This many-to-many relationship enables:
+
+- Cross-functional team organization
+- Department-based permissions (for supervisors)
+- Department-specific time tracking and reporting
+- Resource allocation by department
+
+### Assigning People to Departments
+
+Use the Person API to manage department assignments:
+
+```bash
+# Add person to department
+POST /api/actions/persons/{person_id}/departments/add
+{
+  "department_id": "dept-uuid"
+}
+
+# Remove person from department
+DELETE /api/actions/persons/{person_id}/departments/{department_id}
+```
+
+See [Person Management](/api/people/persons#department-assignment) for details.
+
+## Software Licenses
+
+Track which software is used by each department for budget forecasting and license management.
+
+### Software License Fields
+
+<ResponseField name="id" type="string" format="uuid">
+  Software license unique identifier
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Software name (e.g., "Maya")
+</ResponseField>
+
+<ResponseField name="short_name" type="string">
+  Short name or abbreviation (e.g., "MAYA")
+</ResponseField>
+
+<ResponseField name="file_extension" type="string">
+  Default file extension (e.g., ".ma")
+</ResponseField>
+
+<ResponseField name="department_id" type="string" format="uuid">
+  Associated department ID
+</ResponseField>
+
+### Managing Software Licenses
+
+```bash
+# Get all software licenses by department
+GET /api/data/departments/software-licenses
+
+# Get software for specific department
+GET /api/data/departments/{department_id}/software-licenses
+
+# Add software to department
+POST /api/data/departments/{department_id}/software-licenses
+{
+  "software_id": "software-uuid"
+}
+
+# Remove software from department
+DELETE /api/data/departments/{department_id}/software-licenses/{software_id}
+```
+
+<Note>
+  All software license endpoints require admin permissions.
+</Note>
+
+### Example: Get All Software by Department
+
+```bash
+GET /api/data/departments/software-licenses
+```
+
+Response:
+```json
+{
+  "animation-dept-id": [
+    {
+      "id": "maya-id",
+      "name": "Maya",
+      "short_name": "MAYA",
+      "file_extension": ".ma",
+      "department_id": "animation-dept-id",
+      "created_at": "2024-01-15T10:30:00Z",
+      "updated_at": "2024-01-15T10:30:00Z"
+    }
+  ],
+  "modeling-dept-id": [
+    {
+      "id": "blender-id",
+      "name": "Blender",
+      "short_name": "BLENDER",
+      "file_extension": ".blend",
+      "department_id": "modeling-dept-id",
+      "created_at": "2024-01-15T11:00:00Z",
+      "updated_at": "2024-01-15T11:00:00Z"
+    }
+  ]
+}
+```
+
+## Hardware Items
+
+Track hardware resources allocated to each department for budget forecasting and capacity planning.
+
+### Hardware Item Fields
+
+<ResponseField name="id" type="string" format="uuid">
+  Hardware item unique identifier
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Hardware name (e.g., "Workstation")
+</ResponseField>
+
+<ResponseField name="description" type="string">
+  Hardware description
+</ResponseField>
+
+<ResponseField name="department_id" type="string" format="uuid">
+  Associated department ID
+</ResponseField>
+
+### Managing Hardware Items
+
+```bash
+# Get all hardware items by department
+GET /api/data/departments/hardware-items
+
+# Get hardware for specific department
+GET /api/data/departments/{department_id}/hardware-items
+
+# Add hardware to department
+POST /api/data/departments/{department_id}/hardware-items
+{
+  "hardware_item_id": "hardware-uuid"
+}
+
+# Remove hardware from department
+DELETE /api/data/departments/{department_id}/hardware-items/{hardware_item_id}
+```
+
+<Note>
+  All hardware item endpoints require admin permissions.
+</Note>
+
+### Example: Add Hardware to Department
+
+```bash
+POST /api/data/departments/{department_id}/hardware-items
+```
+
+Request:
+```json
+{
+  "hardware_item_id": "workstation-uuid"
+}
+```
+
+Response:
+```json
+{
+  "id": "link-uuid",
+  "department_id": "animation-dept-id",
+  "hardware_item_id": "workstation-uuid",
+  "created_at": "2024-01-15T10:30:00Z"
+}
+```
+
+## Department-Based Permissions
+
+Supervisors can be restricted to specific departments:
+
+- Supervisors only see time tracking and data for their assigned departments
+- The `departments` field on the Person model controls this access
+- Admins and managers have access to all departments
+
+### Example Permission Flow
+
+1. Supervisor is assigned to "Animation" department
+2. When requesting time spent data, only tasks from Animation department are visible
+3. Department filtering is automatically applied based on the supervisor's department assignments
+
+See [Person Management](/api/people/persons#user-roles) for role details.
+
+## Department Colors
+
+Each department has a color code for visual identification in the UI:
+
+- Must be in hex format (e.g., "#FF5733")
+- Used for color-coding tasks, schedules, and reports
+- Makes it easy to identify department ownership at a glance
+
+## Time Tracking by Department
+
+Time spent data can be filtered by department:
+
+```bash
+GET /api/data/persons/time-spents/month-table/2024?department_id={dept_id}
+```
+
+This enables:
+- Department-specific productivity reports
+- Budget tracking by department
+- Resource allocation analysis
+- Department capacity planning
+
+## Permissions
+
+### Read Permissions
+- All authenticated users can view departments
+- Department list is publicly accessible to authenticated users
+
+### Create/Update/Delete Permissions
+- Only admins can create, update, or delete departments
+- Only admins can manage software and hardware associations
+
+## Examples
+
+### Create a New Department
+
+```bash
+POST /api/data/departments
+```
+
+```json
+{
+  "name": "Animation",
+  "color": "#FF5733"
+}
+```
+
+Response:
+```json
+{
+  "id": "animation-dept-id",
+  "name": "Animation",
+  "color": "#FF5733",
+  "archived": false,
+  "created_at": "2024-01-15T10:30:00Z",
+  "updated_at": "2024-01-15T10:30:00Z"
+}
+```
+
+### Update Department Color
+
+```bash
+PUT /api/data/departments/{department_id}
+```
+
+```json
+{
+  "color": "#00A8E8"
+}
+```
+
+### Get All Departments
+
+```bash
+GET /api/data/departments
+```
+
+```json
+[
+  {
+    "id": "animation-dept-id",
+    "name": "Animation",
+    "color": "#FF5733",
+    "archived": false,
+    "created_at": "2024-01-15T10:30:00Z",
+    "updated_at": "2024-01-15T10:30:00Z"
+  },
+  {
+    "id": "modeling-dept-id",
+    "name": "Modeling",
+    "color": "#00A8E8",
+    "archived": false,
+    "created_at": "2024-01-15T11:00:00Z",
+    "updated_at": "2024-01-15T11:00:00Z"
+  }
+]
+```
+
+### Archive a Department
+
+```bash
+PUT /api/data/departments/{department_id}
+```
+
+```json
+{
+  "archived": true
+}
+```
+
+<Note>
+  Archiving a department doesn't remove it from the system or unassign people. It simply marks it as archived, which can be used to hide it from active department lists in the UI.
+</Note>
+
+### Assign Software to Department
+
+```bash
+POST /api/data/departments/{department_id}/software-licenses
+```
+
+```json
+{
+  "software_id": "maya-uuid"
+}
+```
+
+Response:
+```json
+{
+  "id": "link-uuid",
+  "department_id": "animation-dept-id",
+  "software_id": "maya-uuid",
+  "created_at": "2024-01-15T10:30:00Z"
+}
+```
+
+## Budget Forecasting
+
+Department associations with software and hardware are used for budget forecasting:
+
+1. **Software Costs**: Track which departments use which software licenses
+2. **Hardware Costs**: Track hardware allocation per department  
+3. **Personnel Costs**: Use `daily_salary` from person records combined with department membership
+4. **Time Tracking**: Combine time spent data with department assignments
+
+This enables detailed cost analysis and budget planning by department.
+
+## Related Resources
+
+- [Department Endpoints](/api/people/endpoints#department-endpoints) - Full API reference
+- [Person Management](/api/people/persons) - User and team management

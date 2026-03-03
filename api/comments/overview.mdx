@@ -1,0 +1,223 @@
+---
+title: "Comments & Feedback"
+description: "Manage task comments, feedback, attachments, and review threads in Zou"
+---
+
+## Overview
+
+The Comments API provides comprehensive functionality for managing task feedback, review comments, attachments, and threaded discussions. Comments are tightly integrated with task status changes, creating an audit trail of task progression.
+
+## Key Concepts
+
+### Comments and Task Status
+
+Comments in Zou are unique because they're linked to task status changes:
+
+- Every comment includes a `task_status_id` that records the task state when the comment was made
+- Creating a comment can change the task status
+- Comments maintain history of status transitions (WIP, Pending Review, Retake, Done, etc.)
+- The `last_comment_date` on tasks tracks the most recent feedback
+
+### Review Workflow
+
+**Status Types:**
+- `is_wip`: Marks task as work in progress, sets `real_start_date`
+- `is_retake`: Increments `retake_count`, subject to project retake limits
+- `is_feedback_request`: Sets task `end_date` when first requested
+
+**Retake Capping:**
+Projects and entities can define maximum retakes:
+- Configured via `max_retakes` on project or entity data
+- Prevents infinite revision cycles
+- Raises `WrongParameterException` when limit exceeded
+
+### Comment Threads
+
+Comments support nested replies for detailed discussions:
+
+- **Top-level comments**: Linked to task status changes
+- **Replies**: Stored in JSONB `replies` field on parent comment
+- Each reply has its own `id`, `person_id`, `text`, `mentions`, and `created_at`
+- Replies can include attachments via `attachment_files`
+
+### Attachments
+
+Upload files to comments or replies:
+
+- Supports multiple file types (images, videos, documents, PDFs)
+- Stored with metadata: `name`, `size`, `mimetype`, `extension`
+- Can be linked to top-level comments or specific replies
+- Retrievable by task or project for batch operations
+
+## Core Features
+
+### 1. Mentions and Notifications
+
+**Person Mentions:**
+```python
+# Mention format: @Full Name
+"@John Doe please review this shot"
+```
+
+**Department Mentions:**
+```python
+# Mention format: @DepartmentName
+"@Animation @Lighting review needed"
+```
+
+Mentions automatically create notifications for mentioned users.
+
+### 2. Hashtag Linking
+
+Link comments across task types using hashtags:
+
+```python
+# Reference format: #tasktype
+"Fixed as discussed #animation #lighting"
+
+# Special hashtag
+"#all"  # Links to all task types
+```
+
+When a comment includes hashtags, it's automatically duplicated to matching task types on the same entity.
+
+### 3. Comment Acknowledgements
+
+Team members can acknowledge comments:
+- Toggle acknowledgement on/off per user
+- Tracks who has seen and acknowledged feedback
+- Useful for confirming review notes are understood
+
+### 4. Checklists and Links
+
+Enhance comments with structured data:
+
+```json
+{
+  "checklist": {
+    "item1": "Check lighting",
+    "item2": "Verify textures"
+  },
+  "links": [
+    "https://example.com/reference1",
+    "https://example.com/reference2"
+  ]
+}
+```
+
+## Status Automations
+
+Comments trigger status automations defined at the project level:
+
+**Automation Types:**
+
+1. **Status Change**: When task A reaches status X, set task B to status Y
+2. **Ready For**: Update asset `ready_for` field based on task completion
+3. **Import Revision**: Copy latest preview from triggering task to target task
+
+**Example Workflow:**
+- When Animation reaches "Approved", automatically set Lighting to "Ready to Start"
+- When Lighting reaches "Waiting for Approval", mark asset as "ready_for" Compositing
+- Import approved animation preview into Lighting task
+
+## Comment Data Structure
+
+```json
+{
+  "id": "comment-uuid",
+  "object_id": "task-uuid",
+  "object_type": "Task",
+  "task_status_id": "status-uuid",
+  "person_id": "user-uuid",
+  "text": "Comment text with @mentions and #hashtags",
+  "checklist": {"item1": "task"},
+  "links": ["https://reference.com"],
+  "mentions": ["person-uuid"],
+  "department_mentions": ["dept-uuid"],
+  "acknowledgements": ["person-uuid"],
+  "attachment_files": [
+    {
+      "id": "file-uuid",
+      "name": "screenshot.png",
+      "size": 1024000,
+      "mimetype": "image/png",
+      "extension": "png"
+    }
+  ],
+  "replies": [
+    {
+      "id": "reply-uuid",
+      "person_id": "user-uuid",
+      "text": "Reply text",
+      "mentions": [],
+      "date": "2023-01-01T12:00:00Z",
+      "created_at": "2023-01-01T12:00:00Z"
+    }
+  ],
+  "created_at": "2023-01-01T12:00:00Z",
+  "updated_at": "2023-01-01T12:00:00Z"
+}
+```
+
+## Permissions
+
+### Creating Comments
+- Requires `task_action_access` (assigned to task or supervisor)
+- Can specify `person_id` only with manager permissions
+- Can set custom `created_at` only with manager permissions
+
+### Managing Attachments
+- Delete own attachments: Comment author
+- Delete others' attachments: Project managers only
+
+### Replies
+- Add reply: Task access or comment author
+- Delete reply: Reply author or administrators
+- Clients can only reply to comments from their studio
+
+### Acknowledgements
+- Any user with task access can acknowledge/unacknowledge
+
+## Events and Notifications
+
+Comments trigger multiple event types:
+
+- `comment:new` - New comment created
+- `comment:reply` - Reply added to comment
+- `comment:delete-reply` - Reply deleted
+- `comment:acknowledge` / `comment:unacknowledge` - Acknowledgement toggled
+- `task:status-changed` - Task status changed via comment (when status differs)
+
+Notifications are created for:
+- Task assignees
+- Mentioned users (@mentions)
+- Mentioned departments
+- Comment thread participants (for replies)
+- Task subscribers
+
+## Best Practices
+
+1. **Always include task_status_id**: Even for simple notes, specify the current status
+2. **Use mentions wisely**: Mention specific people who need to take action
+3. **Leverage hashtags**: Link related feedback across departments with #hashtags
+4. **Attach reference files**: Include screenshots, videos, or documents to clarify feedback
+5. **Structure feedback**: Use checklists for multi-item feedback
+6. **Monitor retakes**: Check project `max_retakes` settings to avoid blocking tasks
+7. **Reply for clarification**: Use replies to keep discussions threaded and organized
+
+## Related Endpoints
+
+See the [Comments & Playlists Endpoints](/api/playlists/endpoints) for full API reference.
+
+## Service Functions
+
+Key functions in `comments_service.py`:
+
+- `create_comment()` - Creates comment with status change, hashtag linking, and notifications
+- `reply_comment()` - Adds threaded reply with mentions
+- `acknowledge_comment()` - Toggles acknowledgement for current user
+- `add_attachments_to_comment()` - Uploads files to comment or reply
+- `get_comment_mentions()` - Parses @mentions from text
+- `get_comment_hashtags()` - Parses #hashtags from text
+- `get_attachment_file()` - Retrieves attachment metadata
+- `delete_reply()` - Removes reply and associated attachments

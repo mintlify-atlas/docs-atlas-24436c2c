@@ -1,0 +1,372 @@
+---
+title: Task Types
+description: Categorize tasks by department and production domain
+---
+
+## Introduction
+
+Task types categorize production work into specific domains like modeling, animation, compositing, etc. Each task type belongs to a department and defines the kind of work to be done. Task types control which entities they apply to (assets, shots, etc.) and manage priority ordering in production views.
+
+## Task Type Structure
+
+### Model Fields
+
+```json
+{
+  "id": "a24a6ea4-ce75-4665-a070-57453082c25",
+  "name": "Animation",
+  "short_name": "anim",
+  "description": "Character and object animation",
+  "color": "#FF5733",
+  "priority": 3,
+  "for_entity": "Shot",
+  "allow_timelog": true,
+  "archived": false,
+  "department_id": "b24a6ea4-ce75-4665-a070-57453082c25",
+  "shotgun_id": null,
+  "created_at": "2024-01-10T09:00:00Z",
+  "updated_at": "2024-01-10T09:00:00Z"
+}
+```
+
+### Field Descriptions
+
+- **name**: Display name (e.g., "Modeling", "Animation", "Compositing")
+- **short_name**: Abbreviated code for UI (e.g., "mdl", "anim", "comp")
+- **description**: Detailed explanation of the task type's purpose
+- **color**: Hex color for visual identification in UI (#RRGGBB format)
+- **priority**: Display order (1 = highest priority, shown first)
+- **for_entity**: Entity type this task applies to ("Asset", "Shot", "Edit", "Sequence", "Episode", "Concept")
+- **allow_timelog**: Whether time tracking is enabled for this task type
+- **archived**: Hidden from active use when true
+- **department_id**: Department that owns this task type
+
+## Common Task Types
+
+### Asset Task Types
+
+Typical asset production tasks:
+
+- **Modeling**: 3D model creation
+- **Texturing**: Surface materials and textures
+- **Rigging**: Character/prop setup for animation
+- **Grooming**: Hair, fur, and vegetation
+- **Shading**: Material setup and look development
+- **Concept**: Initial design and ideation
+
+### Shot Task Types
+
+Typical shot production tasks:
+
+- **Layout**: Camera and blocking
+- **Animation**: Character performance
+- **FX**: Visual effects and simulations
+- **Lighting**: Scene lighting and rendering
+- **Compositing**: Final image assembly
+
+### Edit Task Types
+
+Typical editorial tasks:
+
+- **Editing**: Sequence assembly
+- **Sound Design**: Audio work
+- **Color Grading**: Final color correction
+
+## Managing Task Types
+
+### Create or Get Task Type
+
+Use the service method to create task types programmatically:
+
+```python
+from zou.app.services import tasks_service
+
+task_type = tasks_service.get_or_create_task_type(
+    department={"id": "dept-uuid"},
+    name="Animation",
+    color="#FF5733",
+    priority=3,
+    for_entity="Shot",
+    short_name="anim"
+)
+```
+
+This creates a new task type or returns the existing one if it already exists with the same name and entity type.
+
+### List All Task Types
+
+Retrieve all task types:
+
+```python
+task_types = tasks_service.get_task_types()
+```
+
+Or use the REST API through the generic CRUD endpoints:
+
+```
+GET /api/data/task-types
+```
+
+### Get Task Type Details
+
+Retrieve a specific task type:
+
+```python
+task_type = tasks_service.get_task_type(task_type_id)
+```
+
+Or via REST:
+
+```
+GET /api/data/task-types/{task_type_id}
+```
+
+### Update Task Type
+
+Update task type fields:
+
+```
+PUT /api/data/task-types/{task_type_id}
+```
+
+```json
+{
+  "priority": 2,
+  "color": "#3498db",
+  "description": "Updated description"
+}
+```
+
+### Archive Task Type
+
+Archive instead of deleting to preserve historical data:
+
+```json
+{
+  "archived": true
+}
+```
+
+## Task Type Filtering
+
+### Get Task Types for Project
+
+Find all task types used in a project:
+
+```python
+task_types = tasks_service.get_task_types_for_project(project_id)
+```
+
+Returns only task types that have at least one task in the project.
+
+### Get Task Types for Entity
+
+Find task types for a specific entity:
+
+```python
+task_types = tasks_service.get_task_types_for_entity(entity_id)
+```
+
+Also available for specific entity types:
+- `get_task_types_for_asset(asset_id)`
+- `get_task_types_for_shot(shot_id)`
+- `get_task_types_for_sequence(sequence_id)`
+- `get_task_types_for_episode(episode_id)`
+- `get_task_types_for_scene(scene_id)`
+- `get_task_types_for_edit(edit_id)`
+- `get_task_types_for_concept(concept_id)`
+
+## Departments
+
+Task types are organized by departments. Departments group related task types and control access permissions.
+
+### Department Structure
+
+```json
+{
+  "id": "a24a6ea4-ce75-4665-a070-57453082c25",
+  "name": "Animation",
+  "color": "#FF5733",
+  "created_at": "2024-01-10T09:00:00Z",
+  "updated_at": "2024-01-10T09:00:00Z"
+}
+```
+
+### Common Departments
+
+- **Modeling**: 3D model creation and sculpture
+- **Animation**: Character animation and motion
+- **FX**: Effects and simulations
+- **Lighting**: Scene lighting and rendering
+- **Compositing**: Final image assembly
+- **Layout**: Camera work and blocking
+- **Concept**: Design and pre-production
+- **Editorial**: Editing and post-production
+
+### Create or Get Department
+
+```python
+from zou.app.services import tasks_service
+
+department = tasks_service.get_or_create_department(
+    name="Animation",
+    color="#FF5733"
+)
+```
+
+### List All Departments
+
+```python
+departments = tasks_service.get_departments()
+```
+
+Or via REST:
+
+```
+GET /api/data/departments
+```
+
+## Entity Type Mapping
+
+Task types use the `for_entity` field to specify which entity types they apply to:
+
+### Valid Values
+
+- **Asset**: For asset-based tasks (modeling, texturing, rigging)
+- **Shot**: For shot-based tasks (animation, lighting, compositing)
+- **Edit**: For editorial tasks
+- **Sequence**: For sequence-level tasks
+- **Episode**: For episode-level tasks  
+- **Concept**: For concept and pre-production tasks
+
+### Example Configuration
+
+```json
+[
+  {
+    "name": "Modeling",
+    "for_entity": "Asset",
+    "department_id": "modeling-dept-id"
+  },
+  {
+    "name": "Animation",
+    "for_entity": "Shot",
+    "department_id": "animation-dept-id"
+  },
+  {
+    "name": "Editing",
+    "for_entity": "Edit",
+    "department_id": "editorial-dept-id"
+  }
+]
+```
+
+## Priority and Ordering
+
+Task types use the `priority` field to control display order:
+
+- Lower numbers appear first (1 = highest priority)
+- Used in UI to order task columns and filters
+- Helps organize production pipeline stages
+
+### Example Priority Setup
+
+```json
+[
+  {"name": "Modeling", "priority": 1},
+  {"name": "Rigging", "priority": 2},
+  {"name": "Texturing", "priority": 3},
+  {"name": "Shading", "priority": 4}
+]
+```
+
+## Creating Tasks from Task Types
+
+Once task types are configured, create tasks in bulk:
+
+### Create Tasks for Assets
+
+```
+POST /api/actions/projects/{project_id}/task-types/{task_type_id}/assets/create-tasks
+```
+
+### Create Tasks for Shots
+
+```
+POST /api/actions/projects/{project_id}/task-types/{task_type_id}/shots/create-tasks
+```
+
+### Create Tasks for Edits
+
+```
+POST /api/actions/projects/{project_id}/task-types/{task_type_id}/edits/create-tasks
+```
+
+### Create Tasks for Generic Entity Type
+
+```
+POST /api/actions/projects/{project_id}/task-types/{task_type_id}/create-tasks/{entity_type}/
+```
+
+## Time Logging
+
+The `allow_timelog` field controls whether time tracking is enabled:
+
+- When `true`: Artists can log time spents on tasks of this type
+- When `false`: Time logging is disabled
+- Useful for administrative or non-production tasks
+
+## Best Practices
+
+### Naming Conventions
+
+- **name**: Use full descriptive names ("Animation", "Compositing")
+- **short_name**: Use 2-5 character abbreviations ("anim", "comp")
+- Keep naming consistent across projects
+
+### Color Selection
+
+- Use distinct colors for different departments
+- Maintain visual consistency with studio branding
+- Ensure colors have enough contrast for readability
+- Common color schemes:
+  - Blue tones: Technical tasks (rigging, fx)
+  - Warm tones: Creative tasks (animation, modeling)
+  - Green tones: Final tasks (compositing, rendering)
+
+### Priority Organization
+
+- Order task types by production pipeline flow
+- Group related task types with similar priorities
+- Lower priorities for administrative/optional tasks
+
+### Department Structure
+
+- Align departments with studio organization
+- Use departments for access control
+- Keep department count manageable (typically 5-10)
+
+## Deletion and Archiving
+
+### When to Archive
+
+- Task type no longer used in new projects
+- Want to hide from active selection but preserve history
+- Temporary disable during workflow changes
+
+### When to Delete
+
+- Task type created by mistake with no tasks
+- Use the delete tasks endpoint first:
+
+```
+DELETE /api/actions/projects/{project_id}/task-types/{task_type_id}/delete-tasks
+```
+
+Then delete the task type through the generic CRUD endpoint.
+
+## Related Resources
+
+- [Tasks Overview](/api/tasks/overview) - Task lifecycle and workflow
+- [Task Status](/api/tasks/task-status) - Status configuration
+- [Departments API](/api/people/departments) - Department management

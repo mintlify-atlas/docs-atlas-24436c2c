@@ -1,0 +1,1160 @@
+---
+title: "Assets API Endpoints"
+description: "Complete reference for all asset-related API endpoints"
+---
+
+## Asset Endpoints
+
+### Get All Assets
+
+<api-endpoint verb="GET" path="/api/data/assets" />
+
+Retrieve all production assets with filtering and pagination support.
+
+**Query Parameters**
+
+<ParamField query="project_id" type="string">
+  Filter assets by project ID
+</ParamField>
+
+<ParamField query="asset_type_id" type="string">
+  Filter assets by asset type
+</ParamField>
+
+<ParamField query="page" type="integer">
+  Page number for pagination (default: 1)
+</ParamField>
+
+<ParamField query="limit" type="integer">
+  Number of results per page (default: 100)
+</ParamField>
+
+**Response**
+
+<ResponseField name="assets" type="array">
+  <ResponseField name="id" type="string">
+    Asset unique identifier
+  </ResponseField>
+  
+  <ResponseField name="name" type="string">
+    Asset name
+  </ResponseField>
+  
+  <ResponseField name="project_id" type="string">
+    Project identifier
+  </ResponseField>
+  
+  <ResponseField name="entity_type_id" type="string">
+    Asset type identifier
+  </ResponseField>
+  
+  <ResponseField name="description" type="string">
+    Asset description
+  </ResponseField>
+  
+  <ResponseField name="preview_file_id" type="string">
+    Preview image file ID
+  </ResponseField>
+  
+  <ResponseField name="canceled" type="boolean">
+    Whether asset is canceled
+  </ResponseField>
+  
+  <ResponseField name="is_shared" type="boolean">
+    Whether asset is shared across projects
+  </ResponseField>
+</ResponseField>
+
+**Example Request**
+
+```bash
+curl -X GET "https://kitsu.example.com/api/data/assets?project_id=b35b7fb5-df86-5776-b181-68564193d36" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+**Example Response**
+
+```json
+[
+  {
+    "id": "a24a6ea4-ce75-4665-a070-57453082c25",
+    "name": "Hero Character",
+    "description": "Main protagonist of the story",
+    "project_id": "b35b7fb5-df86-5776-b181-68564193d36",
+    "entity_type_id": "c46c8gc6-eg97-6887-c292-79675204e47",
+    "preview_file_id": "e68e0ie8-gi19-8009-e514-91897426g69",
+    "canceled": false,
+    "is_shared": false,
+    "data": {
+      "difficulty": "hard",
+      "style": "realistic"
+    },
+    "created_at": "2023-01-15T10:30:00Z",
+    "updated_at": "2023-06-20T14:45:00Z"
+  }
+]
+```
+
+---
+
+### Get Asset with Tasks
+
+<api-endpoint verb="GET" path="/api/data/assets/with-tasks" />
+
+Retrieve all assets with their related tasks included.
+
+**Query Parameters**
+
+<ParamField query="project_id" type="string" required>
+  Filter assets by project ID
+</ParamField>
+
+<ParamField query="episode_id" type="string">
+  Filter by episode (returns non-episodic assets and assets linked to the episode)
+</ParamField>
+
+<ParamField query="asset_type_id" type="string">
+  Filter by asset type
+</ParamField>
+
+**Response**
+
+<ResponseField name="assets" type="array">
+  <ResponseField name="id" type="string">
+    Asset unique identifier
+  </ResponseField>
+  
+  <ResponseField name="name" type="string">
+    Asset name
+  </ResponseField>
+  
+  <ResponseField name="asset_type_name" type="string">
+    Asset type name
+  </ResponseField>
+  
+  <ResponseField name="tasks" type="array">
+    Array of related tasks
+    
+    <ResponseField name="id" type="string">
+      Task ID
+    </ResponseField>
+    
+    <ResponseField name="task_type_id" type="string">
+      Task type ID
+    </ResponseField>
+    
+    <ResponseField name="task_status_id" type="string">
+      Task status ID
+    </ResponseField>
+    
+    <ResponseField name="assignees" type="array">
+      Array of assigned person IDs
+    </ResponseField>
+  </ResponseField>
+</ResponseField>
+
+**Example Request**
+
+```bash
+curl -X GET "https://kitsu.example.com/api/data/assets/with-tasks?project_id=b35b7fb5-df86-5776-b181-68564193d36" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+**Example Response**
+
+```json
+[
+  {
+    "id": "a24a6ea4-ce75-4665-a070-57453082c25",
+    "name": "Hero Character",
+    "asset_type_id": "c46c8gc6-eg97-6887-c292-79675204e47",
+    "asset_type_name": "Character",
+    "preview_file_id": "e68e0ie8-gi19-8009-e514-91897426g69",
+    "description": "Main protagonist",
+    "tasks": [
+      {
+        "id": "f79f1jf9-hj20-9110-f625-02908537h70",
+        "task_type_id": "g80g2kg0-ik31-0221-g736-13019648i81",
+        "task_status_id": "h91h3lh1-jl42-1332-h847-24120759j92",
+        "assignees": ["i02i4mi2-km53-2443-i958-35231860k03"],
+        "priority": 1,
+        "estimation": 5,
+        "duration": 4
+      }
+    ]
+  }
+]
+```
+
+---
+
+### Get Single Asset
+
+<api-endpoint verb="GET" path="/api/data/assets/{asset_id}" />
+
+Retrieve detailed information about a specific asset including tasks and metadata.
+
+**Path Parameters**
+
+<ParamField path="asset_id" type="string" required>
+  Unique identifier of the asset
+</ParamField>
+
+**Response**
+
+<ResponseField name="id" type="string">
+  Asset unique identifier
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Asset name
+</ResponseField>
+
+<ResponseField name="description" type="string">
+  Asset description
+</ResponseField>
+
+<ResponseField name="project_id" type="string">
+  Project identifier
+</ResponseField>
+
+<ResponseField name="project_name" type="string">
+  Project name
+</ResponseField>
+
+<ResponseField name="entity_type_id" type="string">
+  Asset type identifier
+</ResponseField>
+
+<ResponseField name="asset_type_name" type="string">
+  Asset type name
+</ResponseField>
+
+<ResponseField name="preview_file_id" type="string">
+  Main preview image ID
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  Custom metadata fields
+</ResponseField>
+
+<ResponseField name="tasks" type="array">
+  Array of associated tasks
+</ResponseField>
+
+<ResponseField name="canceled" type="boolean">
+  Whether the asset is canceled
+</ResponseField>
+
+<ResponseField name="is_shared" type="boolean">
+  Whether the asset is shared
+</ResponseField>
+
+<ResponseField name="ready_for" type="string">
+  Task type ID for readiness indicator
+</ResponseField>
+
+<ResponseField name="created_at" type="string">
+  Creation timestamp
+</ResponseField>
+
+<ResponseField name="updated_at" type="string">
+  Last update timestamp
+</ResponseField>
+
+**Example Request**
+
+```bash
+curl -X GET "https://kitsu.example.com/api/data/assets/a24a6ea4-ce75-4665-a070-57453082c25" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+**Example Response**
+
+```json
+{
+  "id": "a24a6ea4-ce75-4665-a070-57453082c25",
+  "name": "Hero Character",
+  "description": "Main protagonist of the story",
+  "project_id": "b35b7fb5-df86-5776-b181-68564193d36",
+  "project_name": "My Awesome Project",
+  "entity_type_id": "c46c8gc6-eg97-6887-c292-79675204e47",
+  "asset_type_name": "Character",
+  "preview_file_id": "e68e0ie8-gi19-8009-e514-91897426g69",
+  "data": {
+    "difficulty": "hard",
+    "height": "180cm",
+    "style": "realistic"
+  },
+  "canceled": false,
+  "is_shared": false,
+  "ready_for": "g80g2kg0-ik31-0221-g736-13019648i81",
+  "tasks": [
+    {
+      "id": "f79f1jf9-hj20-9110-f625-02908537h70",
+      "task_type_id": "g80g2kg0-ik31-0221-g736-13019648i81",
+      "task_status_id": "h91h3lh1-jl42-1332-h847-24120759j92",
+      "assignees": ["i02i4mi2-km53-2443-i958-35231860k03"]
+    }
+  ],
+  "created_at": "2023-01-15T10:30:00Z",
+  "updated_at": "2023-06-20T14:45:00Z"
+}
+```
+
+---
+
+### Create Asset
+
+<api-endpoint verb="POST" path="/api/data/projects/{project_id}/asset-types/{asset_type_id}/assets/new" />
+
+Create a new asset in a project with the specified asset type.
+
+**Path Parameters**
+
+<ParamField path="project_id" type="string" required>
+  Project identifier
+</ParamField>
+
+<ParamField path="asset_type_id" type="string" required>
+  Asset type identifier
+</ParamField>
+
+**Request Body**
+
+<ParamField body="name" type="string" required>
+  Asset name
+</ParamField>
+
+<ParamField body="description" type="string">
+  Asset description
+</ParamField>
+
+<ParamField body="data" type="object">
+  Custom metadata fields (default: {})
+</ParamField>
+
+<ParamField body="is_shared" type="boolean">
+  Whether asset is shared across projects (default: false)
+</ParamField>
+
+<ParamField body="episode_id" type="string">
+  Episode ID if this is an episodic asset variant
+</ParamField>
+
+**Response**
+
+<ResponseField name="id" type="string">
+  Created asset unique identifier
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Asset name
+</ResponseField>
+
+<ResponseField name="description" type="string">
+  Asset description
+</ResponseField>
+
+<ResponseField name="project_id" type="string">
+  Project identifier
+</ResponseField>
+
+<ResponseField name="entity_type_id" type="string">
+  Asset type identifier
+</ResponseField>
+
+<ResponseField name="created_at" type="string">
+  Creation timestamp
+</ResponseField>
+
+**Example Request**
+
+```bash
+curl -X POST "https://kitsu.example.com/api/data/projects/b35b7fb5-df86-5776-b181-68564193d36/asset-types/c46c8gc6-eg97-6887-c292-79675204e47/assets/new" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Magic Sword",
+    "description": "Legendary weapon of the hero",
+    "data": {
+      "difficulty": "medium",
+      "material": "steel"
+    },
+    "is_shared": false
+  }'
+```
+
+**Example Response**
+
+```json
+{
+  "id": "j13j5nj3-ln64-3554-j069-46342971l14",
+  "name": "Magic Sword",
+  "description": "Legendary weapon of the hero",
+  "project_id": "b35b7fb5-df86-5776-b181-68564193d36",
+  "entity_type_id": "c46c8gc6-eg97-6887-c292-79675204e47",
+  "data": {
+    "difficulty": "medium",
+    "material": "steel"
+  },
+  "is_shared": false,
+  "canceled": false,
+  "created_at": "2023-11-15T16:20:00Z",
+  "updated_at": "2023-11-15T16:20:00Z"
+}
+```
+
+---
+
+### Delete Asset
+
+<api-endpoint verb="DELETE" path="/api/data/assets/{asset_id}" />
+
+Delete an asset. If the asset has tasks, it will be marked as canceled instead of deleted (unless force=true).
+
+**Path Parameters**
+
+<ParamField path="asset_id" type="string" required>
+  Asset identifier to delete
+</ParamField>
+
+**Query Parameters**
+
+<ParamField query="force" type="boolean">
+  Force permanent deletion even if tasks exist (default: false)
+</ParamField>
+
+**Response**
+
+Returns 204 No Content on success.
+
+**Example Request**
+
+```bash
+curl -X DELETE "https://kitsu.example.com/api/data/assets/a24a6ea4-ce75-4665-a070-57453082c25" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+<Warning>
+  Only the asset creator or project managers can delete assets. If the asset has related tasks and `force=false`, it will be canceled instead of deleted to preserve production history.
+</Warning>
+
+---
+
+## Project Asset Endpoints
+
+### Get Project Assets
+
+<api-endpoint verb="GET" path="/api/data/projects/{project_id}/assets" />
+
+Retrieve all assets for a specific project.
+
+**Path Parameters**
+
+<ParamField path="project_id" type="string" required>
+  Project identifier
+</ParamField>
+
+**Query Parameters**
+
+<ParamField query="asset_type_id" type="string">
+  Filter by asset type
+</ParamField>
+
+<ParamField query="page" type="integer">
+  Page number
+</ParamField>
+
+<ParamField query="limit" type="integer">
+  Results per page
+</ParamField>
+
+**Example Request**
+
+```bash
+curl -X GET "https://kitsu.example.com/api/data/projects/b35b7fb5-df86-5776-b181-68564193d36/assets" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+---
+
+### Get Project Asset Type Assets
+
+<api-endpoint verb="GET" path="/api/data/projects/{project_id}/asset-types/{asset_type_id}/assets" />
+
+Retrieve all assets of a specific type within a project.
+
+**Path Parameters**
+
+<ParamField path="project_id" type="string" required>
+  Project identifier
+</ParamField>
+
+<ParamField path="asset_type_id" type="string" required>
+  Asset type identifier
+</ParamField>
+
+**Example Request**
+
+```bash
+curl -X GET "https://kitsu.example.com/api/data/projects/b35b7fb5-df86-5776-b181-68564193d36/asset-types/c46c8gc6-eg97-6887-c292-79675204e47/assets" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+---
+
+## Asset Type Endpoints
+
+### Get All Asset Types
+
+<api-endpoint verb="GET" path="/api/data/asset-types" />
+
+Retrieve all asset types in the system.
+
+**Example Request**
+
+```bash
+curl -X GET "https://kitsu.example.com/api/data/asset-types" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+**Example Response**
+
+```json
+[
+  {
+    "id": "c46c8gc6-eg97-6887-c292-79675204e47",
+    "name": "Character",
+    "short_name": "CHAR",
+    "description": "Animated characters",
+    "task_types": [
+      "f79f1jf9-hj20-9110-f625-02908537h70"
+    ],
+    "archived": false
+  }
+]
+```
+
+---
+
+### Get Asset Type
+
+<api-endpoint verb="GET" path="/api/data/asset-types/{asset_type_id}" />
+
+Retrieve a specific asset type by ID.
+
+**Path Parameters**
+
+<ParamField path="asset_type_id" type="string" required>
+  Asset type identifier
+</ParamField>
+
+**Example Request**
+
+```bash
+curl -X GET "https://kitsu.example.com/api/data/asset-types/c46c8gc6-eg97-6887-c292-79675204e47" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+---
+
+### Get Project Asset Types
+
+<api-endpoint verb="GET" path="/api/data/projects/{project_id}/asset-types" />
+
+Retrieve all asset types used in a specific project.
+
+**Path Parameters**
+
+<ParamField path="project_id" type="string" required>
+  Project identifier
+</ParamField>
+
+**Example Request**
+
+```bash
+curl -X GET "https://kitsu.example.com/api/data/projects/b35b7fb5-df86-5776-b181-68564193d36/asset-types" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+---
+
+### Get Shot Asset Types
+
+<api-endpoint verb="GET" path="/api/data/shots/{shot_id}/asset-types" />
+
+Retrieve asset types of assets cast in a specific shot.
+
+**Path Parameters**
+
+<ParamField path="shot_id" type="string" required>
+  Shot identifier
+</ParamField>
+
+**Example Request**
+
+```bash
+curl -X GET "https://kitsu.example.com/api/data/shots/d57d9hd7-fh08-7998-d403-80786315f58/asset-types" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+---
+
+## Asset Task Endpoints
+
+### Get Asset Tasks
+
+<api-endpoint verb="GET" path="/api/data/assets/{asset_id}/tasks" />
+
+Retrieve all tasks for a specific asset.
+
+**Path Parameters**
+
+<ParamField path="asset_id" type="string" required>
+  Asset identifier
+</ParamField>
+
+**Query Parameters**
+
+<ParamField query="task_type_id" type="string">
+  Filter by task type
+</ParamField>
+
+<ParamField query="task_status_id" type="string">
+  Filter by task status
+</ParamField>
+
+**Example Request**
+
+```bash
+curl -X GET "https://kitsu.example.com/api/data/assets/a24a6ea4-ce75-4665-a070-57453082c25/tasks" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+**Example Response**
+
+```json
+[
+  {
+    "id": "f79f1jf9-hj20-9110-f625-02908537h70",
+    "entity_id": "a24a6ea4-ce75-4665-a070-57453082c25",
+    "task_type_id": "g80g2kg0-ik31-0221-g736-13019648i81",
+    "task_status_id": "h91h3lh1-jl42-1332-h847-24120759j92",
+    "assignees": ["i02i4mi2-km53-2443-i958-35231860k03"],
+    "priority": 1,
+    "estimation": 5,
+    "duration": 4,
+    "retake_count": 0,
+    "start_date": "2023-06-01",
+    "due_date": "2023-06-15"
+  }
+]
+```
+
+---
+
+### Get Asset Task Types
+
+<api-endpoint verb="GET" path="/api/data/assets/{asset_id}/task-types" />
+
+Retrieve all task types used for a specific asset.
+
+**Path Parameters**
+
+<ParamField path="asset_id" type="string" required>
+  Asset identifier
+</ParamField>
+
+**Example Request**
+
+```bash
+curl -X GET "https://kitsu.example.com/api/data/assets/a24a6ea4-ce75-4665-a070-57453082c25/task-types" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+**Example Response**
+
+```json
+[
+  {
+    "id": "g80g2kg0-ik31-0221-g736-13019648i81",
+    "name": "Modeling",
+    "short_name": "MOD",
+    "color": "#3273DC",
+    "for_entity": "Asset"
+  },
+  {
+    "id": "h91h3lh1-jl42-1332-h847-24120759j92",
+    "name": "Texturing",
+    "short_name": "TEX",
+    "color": "#22D160",
+    "for_entity": "Asset"
+  }
+]
+```
+
+---
+
+## Asset Casting Endpoints
+
+### Get Asset Casting
+
+<api-endpoint verb="GET" path="/api/data/assets/{asset_id}/casting" />
+
+Retrieve the casting information showing which shots/sequences use this asset.
+
+**Path Parameters**
+
+<ParamField path="asset_id" type="string" required>
+  Asset identifier
+</ParamField>
+
+**Example Request**
+
+```bash
+curl -X GET "https://kitsu.example.com/api/data/assets/a24a6ea4-ce75-4665-a070-57453082c25/casting" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+**Example Response**
+
+```json
+[
+  {
+    "id": "d57d9hd7-fh08-7998-d403-80786315f58",
+    "name": "SH01",
+    "entity_type_name": "Shot",
+    "sequence_name": "SEQ01",
+    "episode_name": "EP01",
+    "nb_occurences": 2,
+    "label": "main"
+  }
+]
+```
+
+---
+
+### Update Asset Casting
+
+<api-endpoint verb="PUT" path="/api/data/assets/{asset_id}/casting" />
+
+Update the casting relationships for an asset.
+
+**Path Parameters**
+
+<ParamField path="asset_id" type="string" required>
+  Asset identifier
+</ParamField>
+
+**Request Body**
+
+<ParamField body="casting" type="array" required>
+  Array of entity IDs to cast this asset in
+</ParamField>
+
+**Example Request**
+
+```bash
+curl -X PUT "https://kitsu.example.com/api/data/assets/a24a6ea4-ce75-4665-a070-57453082c25/casting" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "casting": [
+      {
+        "entity_id": "d57d9hd7-fh08-7998-d403-80786315f58",
+        "nb_occurences": 2
+      }
+    ]
+  }'
+```
+
+---
+
+### Get Shots Casting Asset
+
+<api-endpoint verb="GET" path="/api/data/assets/{asset_id}/cast-in" />
+
+Retrieve all shots that cast this asset in their breakdown.
+
+**Path Parameters**
+
+<ParamField path="asset_id" type="string" required>
+  Asset identifier
+</ParamField>
+
+**Example Request**
+
+```bash
+curl -X GET "https://kitsu.example.com/api/data/assets/a24a6ea4-ce75-4665-a070-57453082c25/cast-in" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+**Example Response**
+
+```json
+[
+  {
+    "shot_id": "d57d9hd7-fh08-7998-d403-80786315f58",
+    "shot_name": "SH01",
+    "sequence_id": "e68e0ie8-gi19-8009-e514-91897426g69",
+    "sequence_name": "SEQ01",
+    "episode_id": "f79f1jf9-hj20-9110-f625-02908537h70",
+    "episode_name": "EP01",
+    "nb_occurences": 2
+  }
+]
+```
+
+---
+
+### Get Linked Assets
+
+<api-endpoint verb="GET" path="/api/data/assets/{asset_id}/assets" />
+
+Retrieve all assets linked to a specific asset through casting relationships.
+
+**Path Parameters**
+
+<ParamField path="asset_id" type="string" required>
+  Asset identifier
+</ParamField>
+
+**Example Request**
+
+```bash
+curl -X GET "https://kitsu.example.com/api/data/assets/a24a6ea4-ce75-4665-a070-57453082c25/assets" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+---
+
+## Asset Instance Endpoints
+
+### Get Asset Instances
+
+<api-endpoint verb="GET" path="/api/data/assets/{asset_id}/asset-asset-instances" />
+
+Retrieve all asset instances instantiated inside a specific asset.
+
+**Path Parameters**
+
+<ParamField path="asset_id" type="string" required>
+  Parent asset identifier
+</ParamField>
+
+**Example Request**
+
+```bash
+curl -X GET "https://kitsu.example.com/api/data/assets/a24a6ea4-ce75-4665-a070-57453082c25/asset-asset-instances" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+**Example Response**
+
+```json
+[
+  {
+    "id": "j13j5nj3-ln64-3554-j069-46342971l14",
+    "asset_id": "a24a6ea4-ce75-4665-a070-57453082c25",
+    "target_asset_id": "k24k6ok4-mo75-4665-k170-57453082m25",
+    "number": 1,
+    "name": "Sword Instance 01",
+    "description": "Hero's main weapon",
+    "active": true
+  }
+]
+```
+
+---
+
+### Create Asset Instance
+
+<api-endpoint verb="POST" path="/api/data/assets/{asset_id}/asset-asset-instances" />
+
+Create a new asset instance inside a specific asset.
+
+**Path Parameters**
+
+<ParamField path="asset_id" type="string" required>
+  Parent asset identifier
+</ParamField>
+
+**Request Body**
+
+<ParamField body="asset_to_instantiate_id" type="string" required>
+  ID of the asset to instantiate
+</ParamField>
+
+<ParamField body="description" type="string">
+  Description for the instance
+</ParamField>
+
+**Example Request**
+
+```bash
+curl -X POST "https://kitsu.example.com/api/data/assets/a24a6ea4-ce75-4665-a070-57453082c25/asset-asset-instances" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "asset_to_instantiate_id": "k24k6ok4-mo75-4665-k170-57453082m25",
+    "description": "Hero sword instance"
+  }'
+```
+
+**Example Response**
+
+```json
+{
+  "id": "l35l7pl5-np86-5776-l281-68564193n36",
+  "asset_id": "a24a6ea4-ce75-4665-a070-57453082c25",
+  "target_asset_id": "k24k6ok4-mo75-4665-k170-57453082m25",
+  "number": 1,
+  "description": "Hero sword instance",
+  "active": true,
+  "created_at": "2023-11-15T16:30:00Z"
+}
+```
+
+---
+
+### Get Shot Asset Instances
+
+<api-endpoint verb="GET" path="/api/data/assets/{asset_id}/shot-asset-instances" />
+
+Retrieve all shot asset instances linked to a specific asset.
+
+**Path Parameters**
+
+<ParamField path="asset_id" type="string" required>
+  Asset identifier
+</ParamField>
+
+**Example Request**
+
+```bash
+curl -X GET "https://kitsu.example.com/api/data/assets/a24a6ea4-ce75-4665-a070-57453082c25/shot-asset-instances" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+---
+
+### Get Scene Asset Instances
+
+<api-endpoint verb="GET" path="/api/data/assets/{asset_id}/scene-asset-instances" />
+
+Retrieve all scene asset instances linked to a specific asset.
+
+**Path Parameters**
+
+<ParamField path="asset_id" type="string" required>
+  Asset identifier
+</ParamField>
+
+**Example Request**
+
+```bash
+curl -X GET "https://kitsu.example.com/api/data/assets/a24a6ea4-ce75-4665-a070-57453082c25/scene-asset-instances" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+---
+
+## Shared Asset Endpoints
+
+### Set Assets Shared
+
+<api-endpoint verb="POST" path="/api/actions/assets/share" />
+
+Share or unshare a specific list of assets.
+
+**Request Body**
+
+<ParamField body="asset_ids" type="array" required>
+  Array of asset IDs to update
+</ParamField>
+
+<ParamField body="is_shared" type="boolean">
+  Whether to share (true) or unshare (false) the assets (default: true)
+</ParamField>
+
+**Example Request**
+
+```bash
+curl -X POST "https://kitsu.example.com/api/actions/assets/share" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "asset_ids": [
+      "a24a6ea4-ce75-4665-a070-57453082c25",
+      "b35b7fb5-df86-5776-b181-68564193d36"
+    ],
+    "is_shared": true
+  }'
+```
+
+---
+
+### Set Project Assets Shared
+
+<api-endpoint verb="POST" path="/api/actions/projects/{project_id}/assets/share" />
+
+Share or unshare all assets (or specific assets) in a project.
+
+**Path Parameters**
+
+<ParamField path="project_id" type="string" required>
+  Project identifier
+</ParamField>
+
+**Request Body**
+
+<ParamField body="is_shared" type="boolean">
+  Whether to share or unshare (default: true)
+</ParamField>
+
+<ParamField body="asset_ids" type="array">
+  Optional: Specific asset IDs to update (if omitted, updates all project assets)
+</ParamField>
+
+**Example Request**
+
+```bash
+curl -X POST "https://kitsu.example.com/api/actions/projects/b35b7fb5-df86-5776-b181-68564193d36/assets/share" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "is_shared": true
+  }'
+```
+
+---
+
+### Set Asset Type Assets Shared
+
+<api-endpoint verb="POST" path="/api/actions/projects/{project_id}/asset-types/{asset_type_id}/assets/share" />
+
+Share or unshare all assets of a specific type in a project.
+
+**Path Parameters**
+
+<ParamField path="project_id" type="string" required>
+  Project identifier
+</ParamField>
+
+<ParamField path="asset_type_id" type="string" required>
+  Asset type identifier
+</ParamField>
+
+**Request Body**
+
+<ParamField body="is_shared" type="boolean">
+  Whether to share or unshare (default: true)
+</ParamField>
+
+**Example Request**
+
+```bash
+curl -X POST "https://kitsu.example.com/api/actions/projects/b35b7fb5-df86-5776-b181-68564193d36/asset-types/c46c8gc6-eg97-6887-c292-79675204e47/assets/share" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "is_shared": true
+  }'
+```
+
+---
+
+### Get Shared Assets Used in Project
+
+<api-endpoint verb="GET" path="/api/data/projects/{project_id}/assets/shared-used" />
+
+Retrieve all shared assets that are used in a specific project.
+
+**Path Parameters**
+
+<ParamField path="project_id" type="string" required>
+  Project identifier
+</ParamField>
+
+**Example Request**
+
+```bash
+curl -X GET "https://kitsu.example.com/api/data/projects/b35b7fb5-df86-5776-b181-68564193d36/assets/shared-used" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+**Example Response**
+
+```json
+[
+  {
+    "id": "a24a6ea4-ce75-4665-a070-57453082c25",
+    "name": "Generic Tree",
+    "project_id": "m46m8qm6-oq97-6887-m392-79675204o47",
+    "entity_type_id": "c46c8gc6-eg97-6887-c292-79675204e47",
+    "is_shared": true
+  }
+]
+```
+
+---
+
+### Get Shared Assets Used in Episode
+
+<api-endpoint verb="GET" path="/api/data/projects/{project_id}/episodes/{episode_id}/assets/shared-used" />
+
+Retrieve all shared assets used in a specific episode of a project.
+
+**Path Parameters**
+
+<ParamField path="project_id" type="string" required>
+  Project identifier
+</ParamField>
+
+<ParamField path="episode_id" type="string" required>
+  Episode identifier
+</ParamField>
+
+**Example Request**
+
+```bash
+curl -X GET "https://kitsu.example.com/api/data/projects/b35b7fb5-df86-5776-b181-68564193d36/episodes/f79f1jf9-hj20-9110-f625-02908537h70/assets/shared-used" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+---
+
+## Error Responses
+
+All endpoints may return the following error responses:
+
+<ResponseField name="400" type="Bad Request">
+  Invalid request parameters or missing required fields
+</ResponseField>
+
+<ResponseField name="401" type="Unauthorized">
+  Missing or invalid authentication token
+</ResponseField>
+
+<ResponseField name="403" type="Forbidden">
+  Insufficient permissions to access the resource
+</ResponseField>
+
+<ResponseField name="404" type="Not Found">
+  Asset, asset type, or project not found
+</ResponseField>
+
+<ResponseField name="500" type="Internal Server Error">
+  Server error occurred while processing request
+</ResponseField>
+
+**Example Error Response**
+
+```json
+{
+  "error": true,
+  "message": "Asset not found",
+  "exception": "AssetNotFoundException"
+}
+```

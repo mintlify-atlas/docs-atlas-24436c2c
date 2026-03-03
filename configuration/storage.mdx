@@ -1,0 +1,565 @@
+---
+title: Storage Configuration
+description: File storage backends, preview folder setup, and S3/Swift configuration for Zou
+---
+
+Zou stores preview files, thumbnails, and attachments using a flexible storage backend system. You can choose between local filesystem storage or cloud object storage (S3 or Swift).
+
+## Storage Backends
+
+Zou supports three storage backends:
+
+1. **Local** - Files stored on the local filesystem (default)
+2. **S3** - Amazon S3 or S3-compatible storage (MinIO, Wasabi, etc.)
+3. **Swift** - OpenStack Swift object storage
+
+<ParamField path="FS_BACKEND" type="string" default="local">
+  Storage backend to use:
+  - `local` - Local filesystem
+  - `s3` - Amazon S3 or compatible
+  - `swift` - OpenStack Swift
+</ParamField>
+
+## Local Storage
+
+Local storage stores files directly on the server filesystem. This is the simplest option and works well for small to medium deployments.
+
+### Configuration
+
+<ParamField path="PREVIEW_FOLDER" type="string" default="./previews">
+  Path to the folder where preview files are stored.
+  
+  Can be:
+  - Relative path: `./previews` (relative to working directory)
+  - Absolute path: `/var/zou/previews`
+  
+  Falls back to `THUMBNAIL_FOLDER` if set.
+</ParamField>
+
+<ParamField path="TMP_DIR" type="string" default="/tmp/zou">
+  Temporary directory for file processing before moving to final location.
+</ParamField>
+
+<ParamField path="PREVIEW_SAVE_SOURCE_FILE" type="boolean" default="False">
+  Save original uploaded files alongside generated previews.
+  
+  Useful for archival or reprocessing purposes.
+</ParamField>
+
+### Directory Structure
+
+Files are organized in a hierarchical structure:
+
+```
+previews/
+├── pictures/
+│   └── <prefix>/
+│       └── <first3>/<next3>/<filename>
+├── movies/
+│   └── <prefix>/
+│       └── <first3>/<next3>/<filename>
+└── files/
+    └── <prefix>/
+        └── <first3>/<next3>/<filename>
+```
+
+**Example:**
+```
+previews/
+├── pictures/
+│   └── previews/
+│       └── a1b/2c3/a1b2c3d4-e5f6-7890-abcd-ef1234567890.png
+├── movies/
+│   └── previews/
+│       └── f4e/5d6/f4e5d6c7-b8a9-0123-4567-890abcdef123.mp4
+└── files/
+    └── attachments/
+        └── 9z8/y7x/9z8y7x6w-5v4u-3t2s-1r0q-ponmlkjihgfe.pdf
+```
+
+This structure from `zou/app/stores/file_store.py:587`:
+
+```python
+def path(self, filename):
+    folder_one = filename.split("-")[0]
+    file_name = "-".join(filename.split("-")[1:])
+    folder_two = file_name[:3]
+    folder_three = file_name[3:6]
+    
+    file_path = os.path.join(
+        root, folder_one, folder_two, folder_three, file_name
+    )
+    return os.path.normpath(file_path)
+```
+
+### Setup Example
+
+```bash
+# Create preview directory
+mkdir -p /var/zou/previews
+chown -R zou:zou /var/zou/previews
+chmod 755 /var/zou/previews
+
+# Configure environment
+export FS_BACKEND="local"
+export PREVIEW_FOLDER="/var/zou/previews"
+export TMP_DIR="/var/zou/tmp"
+```
+
+### Storage Buckets
+
+Zou creates three storage buckets:
+
+- **pictures** - Image previews and thumbnails (PNG, JPG)
+- **movies** - Video previews (MP4)
+- **files** - Attachments and other files
+
+From `zou/app/stores/file_store.py:587`:
+
+```python
+def configure_storages(app):
+    global pictures, movies, files
+    pictures = make_storage("pictures")
+    movies = make_storage("movies")
+    files = make_storage("files")
+```
+
+## S3 Storage
+
+Use Amazon S3 or S3-compatible storage (MinIO, DigitalOcean Spaces, Wasabi, Backblaze B2, etc.) for scalable cloud storage.
+
+### Configuration
+
+<ParamField path="FS_BACKEND" type="string">
+  Set to `s3` to enable S3 storage.
+</ParamField>
+
+<ParamField path="FS_S3_REGION" type="string">
+  AWS region for S3 storage.
+  
+  Example: `us-east-1`, `eu-west-1`
+</ParamField>
+
+<ParamField path="FS_S3_ENDPOINT" type="string">
+  Custom S3-compatible endpoint URL.
+  
+  **Examples:**
+  - MinIO: `http://minio.example.com:9000`
+  - DigitalOcean Spaces: `https://nyc3.digitaloceanspaces.com`
+  - Wasabi: `https://s3.wasabisys.com`
+  - Backblaze B2: `https://s3.us-west-001.backblazeb2.com`
+  
+  Leave empty for AWS S3.
+</ParamField>
+
+<ParamField path="FS_S3_ACCESS_KEY" type="string">
+  S3 access key ID for authentication.
+</ParamField>
+
+<ParamField path="FS_S3_SECRET_KEY" type="string">
+  S3 secret access key for authentication.
+</ParamField>
+
+<ParamField path="FS_S3_CREATE_BUCKET" type="boolean" default="False">
+  Automatically create S3 buckets if they don't exist.
+  
+  Requires appropriate IAM permissions.
+</ParamField>
+
+<ParamField path="FS_BUCKET_PREFIX" type="string" default="">
+  Prefix for bucket names.
+  
+  Buckets created: `{prefix}pictures`, `{prefix}movies`, `{prefix}files`
+</ParamField>
+
+### Encryption
+
+<ParamField path="FS_S3_AES256_ENCRYPTED" type="boolean" default="False">
+  Enable client-side AES-256 encryption for stored files.
+</ParamField>
+
+<ParamField path="FS_S3_AES256_KEY" type="string">
+  AES-256 encryption key (32 bytes, hex-encoded).
+  
+  Generate with: `openssl rand -hex 32`
+</ParamField>
+
+### AWS S3 Setup
+
+**1. Create IAM User**
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:ListBucket",
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:DeleteObject"
+      ],
+      "Resource": [
+        "arn:aws:s3:::zou-pictures",
+        "arn:aws:s3:::zou-pictures/*",
+        "arn:aws:s3:::zou-movies",
+        "arn:aws:s3:::zou-movies/*",
+        "arn:aws:s3:::zou-files",
+        "arn:aws:s3:::zou-files/*"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": "s3:CreateBucket",
+      "Resource": "arn:aws:s3:::zou-*"
+    }
+  ]
+}
+```
+
+**2. Create Buckets**
+
+```bash
+aws s3 mb s3://zou-pictures --region us-east-1
+aws s3 mb s3://zou-movies --region us-east-1
+aws s3 mb s3://zou-files --region us-east-1
+```
+
+**3. Configure Zou**
+
+```bash
+export FS_BACKEND="s3"
+export FS_S3_REGION="us-east-1"
+export FS_S3_ACCESS_KEY="AKIAIOSFODNN7EXAMPLE"
+export FS_S3_SECRET_KEY="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+export FS_BUCKET_PREFIX="zou-"
+export FS_S3_CREATE_BUCKET="False"  # Buckets already created
+```
+
+### MinIO Setup
+
+**1. Install MinIO**
+
+```bash
+docker run -d \
+  -p 9000:9000 \
+  -p 9001:9001 \
+  --name minio \
+  -e MINIO_ROOT_USER=minioadmin \
+  -e MINIO_ROOT_PASSWORD=minioadmin123 \
+  -v /data/minio:/data \
+  quay.io/minio/minio server /data --console-address ":9001"
+```
+
+**2. Create Access Key**
+
+Access MinIO Console at http://localhost:9001 and create an access key.
+
+**3. Configure Zou**
+
+```bash
+export FS_BACKEND="s3"
+export FS_S3_ENDPOINT="http://localhost:9000"
+export FS_S3_ACCESS_KEY="your-access-key"
+export FS_S3_SECRET_KEY="your-secret-key"
+export FS_BUCKET_PREFIX="zou-"
+export FS_S3_CREATE_BUCKET="True"  # Auto-create buckets
+```
+
+## Swift Storage
+
+Use OpenStack Swift object storage for scalable cloud storage.
+
+### Configuration
+
+<ParamField path="FS_BACKEND" type="string">
+  Set to `swift` to enable Swift storage.
+</ParamField>
+
+<ParamField path="FS_SWIFT_AUTHURL" type="string">
+  OpenStack Swift authentication URL.
+  
+  Example: `https://auth.cloud.ovh.net/v3`
+</ParamField>
+
+<ParamField path="FS_SWIFT_USER" type="string">
+  Swift username for authentication.
+</ParamField>
+
+<ParamField path="FS_SWIFT_TENANT_NAME" type="string">
+  Swift tenant/project name.
+</ParamField>
+
+<ParamField path="FS_SWIFT_KEY" type="string">
+  Swift authentication key/password.
+</ParamField>
+
+<ParamField path="FS_SWIFT_REGION_NAME" type="string">
+  Swift region name.
+  
+  Example: `GRA`, `BHS`, `SBG` (for OVH)
+</ParamField>
+
+<ParamField path="FS_SWIFT_AUTH_VERSION" type="string" default="3">
+  Swift authentication API version.
+</ParamField>
+
+<ParamField path="FS_SWIFT_CREATE_CONTAINER" type="boolean" default="False">
+  Automatically create containers if they don't exist.
+</ParamField>
+
+<ParamField path="FS_BUCKET_PREFIX" type="string" default="">
+  Prefix for container names.
+</ParamField>
+
+### Encryption
+
+<ParamField path="FS_SWIFT_AES256_ENCRYPTED" type="boolean" default="False">
+  Enable client-side AES-256 encryption for stored files.
+</ParamField>
+
+<ParamField path="FS_SWIFT_AES256_KEY" type="string">
+  AES-256 encryption key (32 bytes, hex-encoded).
+</ParamField>
+
+### OVH Public Cloud Setup
+
+**1. Create OpenStack User**
+
+In OVH Control Panel:
+- Go to Public Cloud → Users & Roles
+- Create a new OpenStack user
+- Note the username and password
+- Download the openrc.sh file
+
+**2. Create Containers**
+
+```bash
+# Source OpenStack credentials
+source openrc.sh
+
+# Create containers
+openstack container create zou-pictures
+openstack container create zou-movies
+openstack container create zou-files
+```
+
+**3. Configure Zou**
+
+```bash
+export FS_BACKEND="swift"
+export FS_SWIFT_AUTHURL="https://auth.cloud.ovh.net/v3"
+export FS_SWIFT_USER="user-abc123def456"
+export FS_SWIFT_TENANT_NAME="1234567890123456"
+export FS_SWIFT_KEY="your-swift-password"
+export FS_SWIFT_REGION_NAME="GRA"
+export FS_SWIFT_AUTH_VERSION="3"
+export FS_BUCKET_PREFIX="zou-"
+export FS_SWIFT_CREATE_CONTAINER="False"
+```
+
+## File Operations
+
+Zou provides a unified API for file operations across all storage backends from `zou/app/stores/file_store.py:587`.
+
+### Store File
+
+```python
+from zou.app.stores import file_store
+
+# Add picture
+file_store.add_picture("previews", preview_file_id, "/tmp/preview.png")
+
+# Add movie
+file_store.add_movie("previews", preview_file_id, "/tmp/preview.mp4")
+
+# Add file
+file_store.add_file("attachments", attachment_id, "/tmp/document.pdf")
+```
+
+### Read File
+
+```python
+# Read entire file
+data = file_store.read_picture("previews", preview_file_id)
+
+# Stream file (memory efficient)
+for chunk in file_store.open_picture("previews", preview_file_id):
+    # Process chunk
+    pass
+```
+
+### Check Existence
+
+```python
+if file_store.exists_picture("previews", preview_file_id):
+    # File exists
+    pass
+```
+
+### Delete File
+
+```python
+file_store.remove_picture("previews", preview_file_id)
+```
+
+### Copy File
+
+```python
+file_store.copy_picture(
+    "previews", old_preview_id,
+    "previews", new_preview_id
+)
+```
+
+## Migration Between Backends
+
+### Download from Cloud Storage
+
+Migrate files from Swift/S3 to local storage:
+
+```bash
+zou download-storage-files
+```
+
+This downloads all files from the configured cloud storage to the local `PREVIEW_FOLDER`.
+
+### Upload to Cloud Storage
+
+Migrate files from local storage to S3/Swift:
+
+```bash
+# Upload all files
+zou upload-files-to-cloud-storage
+
+# Upload files from last N days
+zou upload-files-to-cloud-storage --days 30
+```
+
+### Migration Process
+
+**Local to S3:**
+
+1. Configure S3 settings:
+   ```bash
+   export FS_BACKEND="s3"
+   export FS_S3_REGION="us-east-1"
+   export FS_S3_ACCESS_KEY="..."
+   export FS_S3_SECRET_KEY="..."
+   export FS_BUCKET_PREFIX="zou-"
+   export FS_S3_CREATE_BUCKET="True"
+   ```
+
+2. Upload files:
+   ```bash
+   zou upload-files-to-cloud-storage
+   ```
+
+3. Restart Zou with new configuration
+
+**S3 to Local:**
+
+1. Keep S3 configuration in environment
+
+2. Download files:
+   ```bash
+   zou download-storage-files
+   ```
+
+3. Update configuration:
+   ```bash
+   export FS_BACKEND="local"
+   export PREVIEW_FOLDER="/var/zou/previews"
+   ```
+
+4. Restart Zou
+
+## File Deletion
+
+<ParamField path="REMOVE_FILES" type="boolean" default="False">
+  Enable file deletion functionality.
+  
+  When disabled, files are orphaned but not deleted. Enable to allow file cleanup.
+</ParamField>
+
+## Performance Considerations
+
+### Local Storage
+
+**Pros:**
+- Lowest latency
+- No bandwidth costs
+- Simple setup
+
+**Cons:**
+- Limited by disk space
+- No redundancy
+- Difficult to scale horizontally
+
+**Best for:** Small to medium deployments, single server
+
+### S3/Swift Storage
+
+**Pros:**
+- Unlimited scalability
+- Built-in redundancy
+- CDN integration possible
+- Multi-server support
+
+**Cons:**
+- Network latency
+- Bandwidth costs
+- More complex setup
+
+**Best for:** Large deployments, multiple servers, high availability
+
+## Troubleshooting
+
+### Local Storage Issues
+
+**Permission denied:**
+```bash
+chown -R zou:zou /var/zou/previews
+chmod -R 755 /var/zou/previews
+```
+
+**Disk full:**
+```bash
+df -h /var/zou/previews
+# Clean up old files or expand disk
+```
+
+### S3 Issues
+
+**Access denied:**
+- Verify IAM permissions
+- Check bucket policies
+- Confirm access keys are valid
+
+**Slow uploads:**
+- Check network bandwidth
+- Consider using S3 Transfer Acceleration
+- Verify endpoint is in closest region
+
+### Swift Issues
+
+**Authentication failed:**
+- Verify auth URL is correct
+- Check username/password
+- Confirm tenant name
+- Verify auth version (usually v3)
+
+**Timeout errors:**
+- Check network connectivity
+- Verify region name
+- Increase timeout settings
+
+## Security Best Practices
+
+1. **Use encryption** - Enable AES-256 encryption for sensitive files
+2. **Restrict access** - Use IAM policies to limit access
+3. **Secure credentials** - Never commit access keys to version control
+4. **Use HTTPS** - Always use HTTPS endpoints for cloud storage
+5. **Regular backups** - Backup cloud storage regularly
+6. **Access logging** - Enable access logs for audit trails

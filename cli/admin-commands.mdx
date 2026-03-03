@@ -1,0 +1,764 @@
+---
+title: "Admin Commands"
+description: "CLI commands for user management, authentication, and system administration"
+---
+
+## Overview
+
+Zou provides administrative commands for managing users, authentication, synchronization between instances, and system maintenance.
+
+## User Management
+
+### create-admin
+
+Create an admin user to access the API. Required for initial setup.
+
+```bash
+zou create-admin admin@example.com --password securepassword
+```
+
+**Arguments:**
+- `EMAIL` - Email address of the admin user (required)
+
+**Options:**
+- `--password TEXT` - User password (required for new users)
+
+**Output (new user):**
+```
+Admin successfully created.
+```
+
+**Output (existing user):**
+```
+Existing user's role has been upgraded to 'admin'.
+```
+
+**Validation:**
+- Password must meet minimum length requirements
+- Email must be valid format (except `admin@example.com` is allowed)
+- Respects user limit if configured
+
+**Use case:** Initial setup or promoting existing users to admin.
+
+---
+
+### change-password
+
+Change the password for an existing user.
+
+```bash
+zou change-password user@example.com --password newpassword123
+```
+
+**Arguments:**
+- `EMAIL` - Email address of the user (required)
+
+**Options:**
+- `--password TEXT` - New password (required)
+
+**Output:**
+```
+Password changed for user@example.com
+```
+
+**Errors:**
+- "The password is too short." - Password does not meet minimum requirements
+
+**Use case:** Password resets and security updates.
+
+---
+
+### set-person-as-active
+
+Activate or deactivate a user account.
+
+```bash
+# Activate a user
+zou set-person-as-active user@example.com
+
+# Deactivate a user
+zou set-person-as-active user@example.com --unactive
+```
+
+**Arguments:**
+- `EMAIL` - Email address of the user (required)
+
+**Options:**
+- `--unactive` - Deactivate the user (optional flag)
+
+**Output (activation):**
+```
+Person user@example.com is set as an active user.
+```
+
+**Output (deactivation):**
+```
+Person user@example.com is set as an unactive user.
+```
+
+**Use case:** Temporarily disable access without deleting the user account.
+
+---
+
+### create-bot
+
+Create a bot account for API automation.
+
+```bash
+zou create-bot \
+  --email bot@example.com \
+  --name "CI Bot" \
+  --role user \
+  --expiration-date 2026-12-31
+```
+
+**Options:**
+- `--email TEXT` - Bot email address (required)
+- `--name TEXT` - Bot display name (required)
+- `--role TEXT` - Bot role: `user`, `manager`, or `admin` (default: `user`)
+- `--expiration-date TEXT` - Expiration date in YYYY-MM-DD format (optional)
+
+**Example without expiration:**
+```bash
+zou create-bot --email automation@example.com --name "Automation Bot"
+```
+
+**Use case:** Creating service accounts for CI/CD pipelines, integrations, or automation scripts.
+
+## Authentication Management
+
+### clean-auth-tokens
+
+Remove revoked and expired authentication tokens from the database.
+
+```bash
+zou clean-auth-tokens
+```
+
+**Use case:** Regular maintenance to clean up stale tokens and reduce database size.
+
+---
+
+### clear-all-auth-tokens
+
+<Warning>
+This command logs out ALL users from ALL sessions. Use with caution.
+</Warning>
+
+Remove all authentication tokens, forcing all users to log in again.
+
+```bash
+zou clear-all-auth-tokens
+```
+
+**Use case:**
+- Security incidents requiring immediate logout of all users
+- After major authentication system changes
+- Emergency access revocation
+
+---
+
+### disable-two-factor-authentication
+
+Disable two-factor authentication for a specific user.
+
+```bash
+zou disable-two-factor-authentication user@example.com
+```
+
+**Arguments:**
+- `EMAIL-OR-DESKTOP-LOGIN` - Email address or desktop login (required)
+
+**Output:**
+```
+Two factor authentication disabled for user@example.com.
+```
+
+**Errors:**
+- "Email (user@example.com) not listed in database." - User not found
+- "Two factor authentication can't be disabled for user@example.com because it's not activated." - 2FA not enabled
+
+**Use case:** Helping users who lost access to their 2FA device.
+
+## LDAP Integration
+
+### sync-with-ldap-server
+
+Synchronize users from your LDAP server to Zou. Creates new user accounts for each LDAP user.
+
+```bash
+zou sync-with-ldap-server
+```
+
+**Prerequisites:**
+- LDAP configuration must be set in environment variables
+- Sufficient user license capacity
+
+**Output:**
+```
+User limit reached (limit 50). New users will not be added.
+```
+
+**Configuration required:**
+```bash
+export LDAP_HOST=ldap.example.com
+export LDAP_BASE_DN="dc=example,dc=com"
+export LDAP_USERNAME=admin
+export LDAP_PASSWORD=password
+```
+
+**Use case:** Bulk user imports and regular synchronization with corporate directory.
+
+## Instance Synchronization
+
+These commands synchronize data between Zou instances, useful for multi-site deployments or backups.
+
+<Info>
+All sync commands require `SYNC_LOGIN` and `SYNC_PASSWORD` environment variables:
+```bash
+export SYNC_LOGIN=admin@source.com
+export SYNC_PASSWORD=sourcepassword
+```
+</Info>
+
+### sync-full
+
+Retrieve all data from a source Zou instance.
+
+```bash
+# Sync all data
+zou sync-full --source http://source.example.com:5000
+
+# Sync specific project
+zou sync-full --source http://source.example.com:5000 --project "Project Name"
+
+# Sync without projects (only metadata)
+zou sync-full --source http://source.example.com:5000 --no-projects
+
+# Sync only projects
+zou sync-full --source http://source.example.com:5000 --only-projects
+
+# Include events
+zou sync-full --source http://source.example.com:5000 --with-events
+```
+
+**Options:**
+- `--source TEXT` - Source instance URL (default: `http://localhost:5000`)
+- `--project TEXT` - Specific project to sync (optional)
+- `--no-projects` - Exclude projects (optional flag)
+- `--only-projects` - Sync only projects (optional flag)
+- `--with-events` - Include event history (optional flag)
+
+**Output:**
+```
+Start syncing.
+[sync progress...]
+Syncing ended.
+```
+
+**Use case:** Initial setup of secondary instance or disaster recovery.
+
+---
+
+### sync-full-files
+
+Retrieve all preview files and thumbnails from a source instance.
+
+```bash
+zou sync-full-files \
+  --source http://source.example.com:5000 \
+  --multithreaded \
+  --number-workers 30
+```
+
+**Options:**
+- `--source TEXT` - Source instance URL (default: `http://localhost:5000`)
+- `--project TEXT` - Specific project (optional)
+- `--multithreaded` - Enable parallel downloads (optional flag)
+- `--number-workers INTEGER` - Number of parallel workers (default: 30)
+- `--number-attemps INTEGER` - Retry attempts per file (default: 3)
+- `--force-resync` - Re-download existing files (optional flag)
+
+**Output:**
+```
+Start syncing.
+[file sync progress...]
+Syncing ended.
+```
+
+**Use case:** Syncing preview files after data synchronization.
+
+---
+
+### sync-changes
+
+Run a daemon that continuously imports data related to changes on the source instance.
+
+```bash
+zou sync-changes \
+  --event-source http://source.example.com:8080 \
+  --source http://source.example.com:8080/api \
+  --logs-directory /var/log/zou
+```
+
+**Options:**
+- `--event-source TEXT` - Event stream URL (default: `http://localhost:8080`)
+- `--source TEXT` - API URL (default: `http://localhost:8080/api`)
+- `--logs-directory TEXT` - Log file directory (optional)
+
+**Use case:** Real-time replication between instances.
+
+---
+
+### sync-file-changes
+
+Run a daemon that downloads files related to changes on the source instance.
+
+```bash
+zou sync-file-changes \
+  --event-source http://source.example.com:8080 \
+  --source http://source.example.com:8080/api
+```
+
+**Options:**
+- `--event-source TEXT` - Event stream URL (default: `http://localhost:8080`)
+- `--source TEXT` - API URL (default: `http://localhost:8080/api`)
+- `--logs-directory TEXT` - Log file directory (optional)
+
+**Use case:** Real-time file replication.
+
+---
+
+### sync-last-events
+
+Retrieve recent events from source instance and import related data.
+
+```bash
+# Sync events from last 60 minutes
+zou sync-last-events \
+  --source http://source.example.com:8080/api \
+  --minutes 60
+
+# Sync with custom page size
+zou sync-last-events \
+  --source http://source.example.com:8080/api \
+  --page-size 500
+```
+
+**Options:**
+- `--source TEXT` - API URL (default: `http://localhost:8080/api`)
+- `--minutes INTEGER` - How many minutes back to sync (default: 0)
+- `--page-size INTEGER` - Events per page (default: 300)
+
+**Use case:** Periodic synchronization via cron job.
+
+---
+
+### sync-last-files
+
+Retrieve recent preview files and thumbnails from source instance.
+
+```bash
+zou sync-last-files \
+  --source http://source.example.com:8080/api \
+  --minutes 20
+```
+
+**Options:**
+- `--source TEXT` - API URL (default: `http://localhost:8080/api`)
+- `--minutes INTEGER` - How many minutes back to sync (default: 20)
+- `--page-size INTEGER` - Files per page (default: 50)
+
+**Use case:** Periodic file synchronization via cron job.
+
+## File Management
+
+### upload-files-to-cloud-storage
+
+Upload preview files to configured object storage (S3, Swift, etc.).
+
+```bash
+# Upload all files
+zou upload-files-to-cloud-storage
+
+# Upload files from last 7 days
+zou upload-files-to-cloud-storage --days 7
+```
+
+**Options:**
+- `--days INTEGER` - Only upload files from last N days (optional)
+
+**Use case:** Migrating to cloud storage or regular backups.
+
+---
+
+### download-storage-files
+
+Download all files from Swift object storage to local storage.
+
+```bash
+zou download-storage-files
+```
+
+**Use case:** Migrating from cloud storage to local storage.
+
+---
+
+### generate-preview-extra
+
+Generate tiles, thumbnails, and metadata for preview files.
+
+```bash
+# Generate all extras
+zou generate-preview-extra --with-tiles --with-thumbnails --with-metadata
+
+# Generate for specific project
+zou generate-preview-extra --project "My Project" --with-tiles
+
+# Generate for specific entity
+zou generate-preview-extra --entity-id abc123 --with-thumbnails
+
+# Only process shots
+zou generate-preview-extra --only-shots --with-tiles
+
+# Only process assets
+zou generate-preview-extra --only-assets --with-metadata
+
+# Process specific episodes
+zou generate-preview-extra --episode "E01" --episode "E02" --with-tiles
+
+# Force regenerate existing tiles
+zou generate-preview-extra --force-regenerate-tiles --with-tiles
+```
+
+**Options:**
+- `--project TEXT` - Specific project name (optional)
+- `--entity-id TEXT` - Specific entity ID (optional)
+- `--episode TEXT` - Specific episode(s), can be used multiple times (optional)
+- `--only-shots` - Process only shots (optional flag)
+- `--only-assets` - Process only assets (optional flag)
+- `--with-tiles` - Generate video tiles (optional flag)
+- `--with-metadata` - Extract video metadata (optional flag)
+- `--with-thumbnails` - Generate thumbnails (optional flag)
+- `--force-regenerate-tiles` - Regenerate existing tiles (optional flag)
+
+**Use case:** Generating missing previews or updating preview quality.
+
+---
+
+### renormalize-movie-preview-files
+
+Reprocess movie preview files to fix encoding issues or update quality.
+
+```bash
+# Renormalize specific preview
+zou renormalize-movie-preview-files --preview-file-id abc123
+
+# Renormalize all previews in project
+zou renormalize-movie-preview-files --project-id def456
+
+# Renormalize all broken previews
+zou renormalize-movie-preview-files --all-broken
+
+# Renormalize stuck processing previews
+zou renormalize-movie-preview-files --all-processing
+
+# Renormalize previews from last 24 hours
+zou renormalize-movie-preview-files --hours 24
+
+# Renormalize previews from last 7 days
+zou renormalize-movie-preview-files --days 7
+```
+
+**Options:**
+- `--preview-file-id TEXT` - Specific preview file ID (optional)
+- `--project-id TEXT` - All previews in project (optional)
+- `--all-broken` - All broken previews (optional flag)
+- `--all-processing` - All stuck processing previews (optional flag)
+- `--days INTEGER` - Previews from last N days (optional)
+- `--hours INTEGER` - Previews from last N hours (optional)
+- `--minutes INTEGER` - Previews from last N minutes (optional)
+
+**Use case:** Fixing video encoding issues or updating to new encoding standards.
+
+---
+
+### reset-movie-files-metadata
+
+Extract and store height/width metadata for all movie preview files.
+
+```bash
+zou reset-movie-files-metadata
+```
+
+**Use case:** Rebuilding video metadata after migration or corruption.
+
+---
+
+### reset-picture-files-metadata
+
+Extract and store height/width metadata for all picture preview files.
+
+```bash
+zou reset-picture-files-metadata
+```
+
+**Use case:** Rebuilding image metadata after migration or corruption.
+
+## Search Management
+
+### reset-search-index
+
+Rebuild the search index from scratch.
+
+```bash
+zou reset-search-index
+```
+
+**Use case:** Fixing search issues or after major data imports.
+
+---
+
+### search-asset
+
+Search for assets by name or other criteria.
+
+```bash
+zou search-asset --query "Character"
+```
+
+**Options:**
+- `--query TEXT` - Search query (default: empty = all assets)
+
+**Use case:** Testing search functionality or finding asset IDs.
+
+## Plugin Management
+
+### install-plugin
+
+Install a Zou plugin from a local path, zip file, or Git repository.
+
+```bash
+# Install from local directory
+zou install-plugin --path /path/to/plugin
+
+# Install from zip file
+zou install-plugin --path /path/to/plugin.zip
+
+# Install from Git repository
+zou install-plugin --path https://github.com/user/zou-plugin.git
+
+# Force reinstall
+zou install-plugin --path /path/to/plugin --force
+```
+
+**Options:**
+- `--path TEXT` - Plugin path (required)
+- `--force` - Force reinstall if already installed (optional flag)
+
+**Output:**
+```
+✅ Plugin /path/to/plugin installed. Restart the server to apply changes.
+```
+
+<Info>
+After installing a plugin, you must restart the Zou server for changes to take effect.
+</Info>
+
+---
+
+### uninstall-plugin
+
+Remove an installed plugin.
+
+```bash
+zou uninstall-plugin --id my-plugin-id
+```
+
+**Options:**
+- `--id TEXT` - Plugin ID (required)
+
+**Output:**
+```
+Plugin my-plugin-id uninstalled. Restart the server to apply changes.
+```
+
+---
+
+### list-plugins
+
+List all installed plugins.
+
+```bash
+# Table format (default)
+zou list-plugins
+
+# JSON format
+zou list-plugins --format json
+
+# Verbose output
+zou list-plugins --verbose
+
+# Filter by plugin ID
+zou list-plugins --filter-field plugin_id --filter-value my-plugin
+
+# Filter by maintainer
+zou list-plugins --filter-field maintainer --filter-value "Company Name"
+```
+
+**Options:**
+- `--format TEXT` - Output format: `table` or `json` (default: `table`)
+- `--verbose` - Show additional plugin information (optional flag)
+- `--filter-field TEXT` - Field to filter: `plugin_id`, `name`, `maintainer`, `license` (optional)
+- `--filter-value TEXT` - Value to search for (optional)
+
+---
+
+### create-plugin-skeleton
+
+Create a new plugin template with boilerplate code.
+
+```bash
+zou create-plugin-skeleton \
+  --path /plugins/my-plugin \
+  --id my-plugin \
+  --name "My Plugin" \
+  --description "Does something awesome" \
+  --version 1.0.0 \
+  --maintainer "Your Name <your@email.com>" \
+  --website mywebsite.com \
+  --license GPL-3.0-only
+```
+
+**Options:**
+- `--path TEXT` - Directory to create plugin (required)
+- `--id TEXT` - Unique plugin ID (required)
+- `--name TEXT` - Plugin display name (default: "MyPlugin")
+- `--description TEXT` - Plugin description (default: "My plugin description.")
+- `--version TEXT` - Plugin version (default: "0.1.0")
+- `--maintainer TEXT` - Maintainer info (default: "Author &lt;author@author.com&gt;")
+- `--website TEXT` - Plugin website (default: "mywebsite.com")
+- `--license TEXT` - License identifier (default: "GPL-3.0-only")
+- `--icon TEXT` - Lucide icon name (optional)
+- `--force` - Overwrite existing directory (optional flag)
+
+---
+
+### create-plugin-package
+
+Package a plugin directory into a distributable zip file.
+
+```bash
+zou create-plugin-package \
+  --path /plugins/my-plugin \
+  --output-path /dist/my-plugin.zip
+```
+
+**Options:**
+- `--path TEXT` - Plugin directory (required)
+- `--output-path TEXT` - Output zip file path (required)
+- `--force` - Overwrite existing file (optional flag)
+
+---
+
+### migrate-plugin-db
+
+Generate database migration files for a plugin.
+
+```bash
+zou migrate-plugin-db \
+  --path /plugins/my-plugin \
+  --message "Add custom table"
+```
+
+**Options:**
+- `--path TEXT` - Plugin directory (required)
+- `--message TEXT` - Migration description (default: empty)
+
+## System Information
+
+### version
+
+Display the current Zou version.
+
+```bash
+zou version
+```
+
+**Output:**
+```
+Zou version: 0.19.0
+```
+
+## Common Admin Workflows
+
+### Initial Setup
+
+```bash
+# 1. Initialize database
+zou init-db
+zou init-data
+
+# 2. Create admin user
+zou create-admin admin@example.com --password securepassword
+
+# 3. Create additional users or sync LDAP
+zou sync-with-ldap-server
+```
+
+### User Management
+
+```bash
+# Reset user password
+zou change-password user@example.com --password newpassword
+
+# Disable 2FA for locked-out user
+zou disable-two-factor-authentication user@example.com
+
+# Deactivate user
+zou set-person-as-active user@example.com --unactive
+```
+
+### Security Maintenance
+
+```bash
+# Regular token cleanup (run weekly)
+zou clean-auth-tokens
+
+# Emergency logout all users
+zou clear-all-auth-tokens
+```
+
+### Instance Replication
+
+```bash
+# Set credentials
+export SYNC_LOGIN=admin@source.com
+export SYNC_PASSWORD=sourcepass
+
+# Initial full sync
+zou sync-full --source http://source.example.com:5000
+zou sync-full-files --source http://source.example.com:5000
+
+# Continuous sync (run as daemon)
+zou sync-changes --event-source http://source.example.com:8080
+zou sync-file-changes --event-source http://source.example.com:8080
+```
+
+### File Maintenance
+
+```bash
+# Generate missing preview extras
+zou generate-preview-extra --with-tiles --with-thumbnails --with-metadata
+
+# Fix broken video previews
+zou renormalize-movie-preview-files --all-broken
+
+# Upload files to cloud storage
+zou upload-files-to-cloud-storage
+```
+
+## Next Steps
+
+- [Database Commands](/cli/database-commands) - Database management reference
+- [CLI Overview](/cli/overview) - General CLI usage

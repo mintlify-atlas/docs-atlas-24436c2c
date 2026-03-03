@@ -1,122 +1,141 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
-  "name": "Mint Starter Kit",
+  "name": "Zou (Kitsu API)",
+  "theme": "sequoia",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#00b3c2",
+    "light": "#4dd4e1",
+    "dark": "#008a96"
   },
-  "favicon": "/favicon.svg",
+  "navbar": {
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/cgwire/zou"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/cgwire/zou"
+    }
+  },
   "navigation": {
     "tabs": [
       {
-        "tab": "Guides",
+        "tab": "Documentation",
         "groups": [
           {
-            "group": "Getting started",
+            "group": "Get Started",
             "pages": [
-              "index",
-              "quickstart",
-              "development"
+              "introduction",
+              "installation",
+              "quickstart"
             ]
           },
           {
-            "group": "Customization",
+            "group": "Core Concepts",
             "pages": [
-              "essentials/settings",
-              "essentials/navigation"
+              "concepts/architecture",
+              "concepts/data-model",
+              "concepts/authentication",
+              "concepts/permissions"
             ]
           },
           {
-            "group": "Writing content",
+            "group": "Configuration",
             "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/reusable-snippets"
+              "configuration/environment-variables",
+              "configuration/database",
+              "configuration/storage",
+              "configuration/event-stream"
             ]
           },
           {
-            "group": "AI tools",
+            "group": "CLI Reference",
             "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
+              "cli/overview",
+              "cli/database-commands",
+              "cli/admin-commands"
             ]
           }
         ]
       },
       {
-        "tab": "API reference",
+        "tab": "API Reference",
         "groups": [
           {
-            "group": "API documentation",
+            "group": "Authentication",
             "pages": [
-              "api-reference/introduction"
+              "api/auth/login",
+              "api/auth/tokens",
+              "api/auth/permissions"
             ]
           },
           {
-            "group": "Endpoint examples",
+            "group": "Projects",
             "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
+              "api/projects/overview",
+              "api/projects/endpoints"
+            ]
+          },
+          {
+            "group": "Assets",
+            "pages": [
+              "api/assets/overview",
+              "api/assets/asset-types",
+              "api/assets/endpoints"
+            ]
+          },
+          {
+            "group": "Shots & Sequences",
+            "pages": [
+              "api/shots/overview",
+              "api/shots/sequences",
+              "api/shots/endpoints"
+            ]
+          },
+          {
+            "group": "Tasks",
+            "pages": [
+              "api/tasks/overview",
+              "api/tasks/task-types",
+              "api/tasks/task-status",
+              "api/tasks/endpoints"
+            ]
+          },
+          {
+            "group": "Files & Previews",
+            "pages": [
+              "api/files/working-files",
+              "api/files/output-files",
+              "api/files/preview-files",
+              "api/files/endpoints"
+            ]
+          },
+          {
+            "group": "People & Teams",
+            "pages": [
+              "api/people/persons",
+              "api/people/departments",
+              "api/people/endpoints"
+            ]
+          },
+          {
+            "group": "Comments & Playlists",
+            "pages": [
+              "api/comments/overview",
+              "api/playlists/overview",
+              "api/playlists/endpoints"
+            ]
+          },
+          {
+            "group": "Events & Notifications",
+            "pages": [
+              "api/events/event-stream",
+              "api/events/notifications"
             ]
           }
         ]
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
-  },
-  "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
-  },
-  "navbar": {
-    "links": [
-      {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
-      }
-    ],
-    "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
-    }
-  },
-  "contextual": {
-    "options": [
-     "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
-   ]
-  },
-  "footer": {
-    "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
-    }
+    ]
   }
 }

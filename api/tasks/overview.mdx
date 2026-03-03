@@ -1,0 +1,286 @@
+---
+title: Tasks Overview
+description: Understanding tasks, assignments, and workflow in Zou
+---
+
+## Introduction
+
+Tasks are the fundamental units of work in Zou's production pipeline. Each task represents work assigned to artists on specific entities (assets, shots, scenes, sequences, episodes, edits, or concepts). Tasks track progress through status changes, support artist assignments, time tracking, comments, and preview files.
+
+## Task Structure
+
+A task consists of:
+
+- **Basic Information**: Name, description, priority, and difficulty (1-5 scale)
+- **Scheduling**: Start date, due date, real start date, end date, and done date
+- **Progress Tracking**: Completion rate, estimation, duration, retake count
+- **Relationships**: Project, entity, task type, task status, assignees, and assigner
+- **Media**: Last preview file reference
+- **Custom Data**: JSONB data field for additional metadata
+
+### Task Model Fields
+
+```json
+{
+  "id": "a24a6ea4-ce75-4665-a070-57453082c25",
+  "name": "main",
+  "description": "Character modeling task",
+  "priority": 0,
+  "difficulty": 3,
+  "duration": 120,
+  "estimation": 180,
+  "completion_rate": 75,
+  "retake_count": 1,
+  "start_date": "2024-01-15T09:00:00Z",
+  "due_date": "2024-01-20T18:00:00Z",
+  "real_start_date": "2024-01-15T10:30:00Z",
+  "end_date": "2024-01-18T16:00:00Z",
+  "done_date": "2024-01-18T16:00:00Z",
+  "last_comment_date": "2024-01-18T15:45:00Z",
+  "project_id": "b24a6ea4-ce75-4665-a070-57453082c25",
+  "task_type_id": "c24a6ea4-ce75-4665-a070-57453082c25",
+  "task_status_id": "d24a6ea4-ce75-4665-a070-57453082c25",
+  "entity_id": "e24a6ea4-ce75-4665-a070-57453082c25",
+  "assigner_id": "f24a6ea4-ce75-4665-a070-57453082c25",
+  "assignees": ["g24a6ea4-ce75-4665-a070-57453082c25"],
+  "last_preview_file_id": "h24a6ea4-ce75-4665-a070-57453082c25",
+  "data": {},
+  "created_at": "2024-01-15T09:00:00Z",
+  "updated_at": "2024-01-18T16:00:00Z"
+}
+```
+
+## Task Lifecycle
+
+Tasks follow a standard production workflow:
+
+### 1. Task Creation
+
+Tasks are created for entities using task types:
+
+- Created individually or in batch for multiple entities
+- Default status applied ("Todo" for standard tasks, "Neutral" for concepts)
+- Initially unassigned with zero duration and estimation
+
+### 2. Assignment
+
+Tasks can be assigned to one or more artists:
+
+- Multiple assignees supported per task
+- Assignments trigger notifications
+- Assigner tracked for accountability
+- Department access controls apply
+
+### 3. Work Progress
+
+As work proceeds, tasks move through statuses:
+
+- **WIP (Work In Progress)**: Sets `real_start_date` on first WIP status
+- **To Review / Feedback Request**: Sets `end_date` when submitted for review
+- **Retake**: Increments `retake_count` when switching to retake status
+- **Done**: Sets `done_date` when marked complete
+
+### 4. Status Automation
+
+Certain status changes trigger automatic updates:
+
+- `real_start_date`: Set when task first enters WIP status
+- `end_date`: Set when task enters feedback request status
+- `done_date`: Set when task enters done status
+- `retake_count`: Incremented on transitions to retake status
+
+### 5. Comments and Previews
+
+Tasks support collaborative review:
+
+- Comments track feedback and discussion
+- Preview files attach to comments with revision tracking
+- Acknowledgements and mentions for team coordination
+- Attachment files for reference materials
+
+### 6. Time Tracking
+
+Tasks track time spent:
+
+- Time spents recorded per person per day
+- Duration automatically updated from time spents
+- Estimation vs actual duration comparison
+
+## Task Assignments
+
+### Assigning Tasks
+
+Assign a single task:
+
+```
+PUT /api/actions/tasks/{task_id}/assign
+```
+
+```json
+{
+  "person_id": "a24a6ea4-ce75-4665-a070-57453082c25"
+}
+```
+
+Assign multiple tasks to a person:
+
+```
+PUT /api/actions/persons/{person_id}/assign
+```
+
+```json
+{
+  "task_ids": [
+    "a24a6ea4-ce75-4665-a070-57453082c25",
+    "b24a6ea4-ce75-4665-a070-57453082c25"
+  ]
+}
+```
+
+### Clearing Assignments
+
+Remove assignees from tasks:
+
+```
+PUT /api/actions/tasks/clear-assignation
+```
+
+```json
+{
+  "task_ids": [
+    "a24a6ea4-ce75-4665-a070-57453082c25"
+  ],
+  "person_id": "b24a6ea4-ce75-4665-a070-57453082c25"
+}
+```
+
+Omit `person_id` to clear all assignees from the tasks.
+
+## Workflow Integration
+
+### Creating Tasks in Bulk
+
+Create tasks for all shots in a project:
+
+```
+POST /api/actions/projects/{project_id}/task-types/{task_type_id}/shots/create-tasks
+```
+
+```json
+[]
+```
+
+Or specify specific shot IDs:
+
+```json
+[
+  "a24a6ea4-ce75-4665-a070-57453082c25",
+  "b24a6ea4-ce75-4665-a070-57453082c25"
+]
+```
+
+Similar endpoints exist for:
+- Assets: `/assets/create-tasks`
+- Edits: `/edits/create-tasks`
+- Concepts: `/concepts/create-tasks`
+- Generic entities: `/create-tasks/{entity_type}/`
+
+### Submitting for Review
+
+Set a task to review status:
+
+```
+PUT /api/actions/tasks/{task_id}/to-review
+```
+
+```json
+{
+  "person_id": "a24a6ea4-ce75-4665-a070-57453082c25",
+  "comment": "Please review this version",
+  "name": "main",
+  "revision": 1,
+  "change_status": true
+}
+```
+
+## Querying Tasks
+
+### Get Full Task Details
+
+Retrieve a task with all relationships populated:
+
+```
+GET /api/data/tasks/{task_id}/full
+```
+
+Returns task with full assignee details, task type, task status, entity, entity type, project, sequence, and episode information.
+
+### Get Person's Tasks
+
+Retrieve all open tasks for a person:
+
+```
+GET /api/data/persons/{person_id}/tasks
+```
+
+Retrieve completed tasks:
+
+```
+GET /api/data/persons/{person_id}/done-tasks
+```
+
+### Get Tasks with Filters
+
+Query open project tasks with multiple filters:
+
+```
+GET /api/data/tasks/open-tasks?project_id={id}&task_type_id={id}&person_id={id}
+```
+
+Supported filters:
+- `project_id`: Filter by project
+- `task_type_id`: Filter by task type
+- `task_status_id`: Filter by status
+- `person_id`: Filter by assignee (or "unassigned")
+- `studio_id`: Filter by studio
+- `department_id`: Filter by department
+- `start_date`: Tasks starting after date
+- `due_date`: Tasks due before date
+- `priority`: Filter by task type priority
+- `page`: Pagination page number
+- `limit`: Results per page (default 100)
+
+## Best Practices
+
+### Task Naming
+
+Most tasks use the name "main" as the default. Custom names can be used for:
+- Multiple tasks of the same type on one entity
+- Specialized workflow steps
+- Subdivision of work
+
+### Estimation and Duration
+
+- **Estimation**: Planned time in minutes for the task
+- **Duration**: Actual time spent (auto-calculated from time spents)
+- Compare estimation vs duration for pipeline efficiency analysis
+
+### Status Transitions
+
+Common status flows:
+
+1. **Standard Flow**: Todo → WIP → Waiting for Approval → Done
+2. **Retake Flow**: Waiting for Approval → Retake → WIP → Waiting for Approval → Done
+3. **Concept Flow**: Neutral → To Review → Approved/Rejected
+
+### Department Access
+
+Tasks inherit department access from their task type. Artists can only be assigned to tasks in their department(s).
+
+## Related Resources
+
+- [Task Types](/api/tasks/task-types) - Configure task categories
+- [Task Status](/api/tasks/task-status) - Manage task statuses
+- [Task Endpoints](/api/tasks/endpoints) - Complete API reference
+- [Comments API](/api/comments/overview) - Add feedback to tasks
+- [Preview Files API](/api/files/preview-files) - Manage task previews

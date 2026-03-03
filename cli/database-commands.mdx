@@ -1,0 +1,386 @@
+---
+title: "Database Commands"
+description: "CLI commands for managing the Zou database schema and data"
+---
+
+## Overview
+
+Zou provides comprehensive database management commands for initializing, migrating, and maintaining your PostgreSQL database.
+
+<Warning>
+Many database commands are destructive and cannot be undone. Always backup your database before running commands like `clear-db` or `reset-db`.
+</Warning>
+
+## Initialization Commands
+
+### init-db
+
+Create database tables. The database itself must already exist (created through PostgreSQL client).
+
+```bash
+zou init-db
+```
+
+**Output:**
+```
+Creating database and tables...
+Database and tables created.
+```
+
+**Use case:** First-time setup of a new Zou instance.
+
+---
+
+### is-db-ready
+
+Check if the database is properly initialized.
+
+```bash
+zou is-db-ready
+```
+
+**Output (initialized):**
+```
+Database is initialized.
+```
+
+**Output (not initialized):**
+```
+Database is not initialized. Run 'zou init-db' and 'zou init-data'.
+```
+
+**Use case:** Health checks and deployment verification.
+
+---
+
+### init-data
+
+Generate the minimal dataset required to run Kitsu (task statuses, asset types, etc.).
+
+```bash
+zou init-data
+```
+
+**Use case:** Must be run after `init-db` to populate default data.
+
+## Migration Commands
+
+### upgrade-db
+
+Upgrade the database schema to the latest version. This command also sends anonymized statistics (user count, preview count) to telemetry services unless disabled.
+
+```bash
+zou upgrade-db
+```
+
+**Disable telemetry:**
+```bash
+zou upgrade-db --no-telemetry
+```
+
+**Use case:** After upgrading Zou to a new version.
+
+---
+
+### migrate-db
+
+<Warning>
+Development only. Do not use in production.
+</Warning>
+
+Generate new migration files to describe database schema changes.
+
+```bash
+zou migrate-db --message "Add new column to tasks table"
+```
+
+**Options:**
+- `--message TEXT` - Description of the migration (optional)
+
+**Use case:** Plugin development or Zou core development.
+
+---
+
+### downgrade-db
+
+<Warning>
+Development only. This operation can cause data loss.
+</Warning>
+
+Downgrade the database to a previous schema revision.
+
+```bash
+# Downgrade to previous revision
+zou downgrade-db
+
+# Downgrade to specific revision
+zou downgrade-db --revision abc123def456
+```
+
+**Options:**
+- `--revision TEXT` - Migration hash or relative identifier (default: `-1` for previous revision)
+
+**Examples:**
+```bash
+# Go back one revision
+zou downgrade-db --revision -1
+
+# Go back two revisions
+zou downgrade-db --revision -2
+
+# Go to specific revision hash
+zou downgrade-db --revision 3f4a8b2c1d5e
+```
+
+---
+
+### stamp-db
+
+Set the database schema revision without running migrations. Used to mark the database as being at a specific migration version.
+
+```bash
+# Stamp to current revision
+zou stamp-db
+
+# Stamp to specific revision
+zou stamp-db --revision abc123def456
+```
+
+**Options:**
+- `--revision TEXT` - Migration revision hash (optional)
+
+**Use case:** Fixing migration tracking issues or manual schema synchronization.
+
+---
+
+### reset-migrations
+
+Reset the database schema revision to the base (first) revision.
+
+```bash
+zou reset-migrations
+```
+
+<Warning>
+This does not modify the database structure, only the migration tracking.
+</Warning>
+
+**Use case:** Recovery from migration tracking issues.
+
+## Destructive Commands
+
+<Warning>
+The following commands permanently delete data. Always create backups before running these commands.
+</Warning>
+
+### clear-db
+
+Drop all tables from the database.
+
+```bash
+zou clear-db
+```
+
+**Output:**
+```
+Deleting database and tables...
+Database and tables deleted.
+```
+
+<Warning>
+This command deletes ALL data including:
+- All projects and productions
+- All users and permissions
+- All tasks and comments
+- All preview files metadata
+- All system configuration
+
+This operation cannot be undone!
+</Warning>
+
+**Use case:** Complete cleanup before reinstalling or in development environments.
+
+---
+
+### reset-db
+
+Drop all tables and recreate them. This is equivalent to running `clear-db` followed by `init-db`.
+
+```bash
+zou reset-db
+```
+
+**Output:**
+```
+Deleting database and tables...
+Database and tables deleted.
+Database and tables created.
+```
+
+<Warning>
+This permanently deletes all data and recreates an empty database structure.
+</Warning>
+
+**Use case:** Starting fresh in development or test environments.
+
+## Cache Management
+
+### clear-memory-cache
+
+Clear the Redis memory cache.
+
+```bash
+zou clear-memory-cache
+```
+
+**Use case:**
+- After configuration changes
+- Troubleshooting caching issues
+- Force refresh of cached data
+
+## Data Maintenance
+
+### remove-old-data
+
+Remove old events, notifications, and login logs. By default, removes data older than 90 days.
+
+```bash
+# Remove data older than 90 days (default)
+zou remove-old-data
+
+# Remove data older than 30 days
+zou remove-old-data --days 30
+
+# Remove data older than 180 days
+zou remove-old-data --days 180
+```
+
+**Options:**
+- `--days INTEGER` - Number of days to keep (default: 90)
+
+**Use case:** Regular database maintenance to reduce database size and improve performance.
+
+---
+
+### clean-tasks-data
+
+Reset task model data including retake count, WIP start date, and end date for a specific project.
+
+```bash
+zou clean-tasks-data --project-id a1b2c3d4-e5f6-7890-abcd-ef1234567890
+```
+
+**Options:**
+- `--project-id TEXT` - Project ID (required)
+
+**Use case:** Fixing data inconsistencies or resetting task statistics.
+
+---
+
+### dump-database
+
+Dump the database and optionally save it to configured object storage.
+
+```bash
+# Dump database locally
+zou dump-database
+
+# Dump and store in object storage
+zou dump-database --store
+```
+
+**Options:**
+- `--store` - Upload dump to object storage (optional flag)
+
+**Use case:** Regular backups and disaster recovery preparation.
+
+---
+
+### reset-breakdown-data
+
+Reset breakdown statistics for all open projects.
+
+```bash
+zou reset-breakdown-data
+```
+
+**Use case:** Recalculating asset/shot relationships and statistics.
+
+## Common Workflows
+
+### First-Time Setup
+
+```bash
+# 1. Create database tables
+zou init-db
+
+# 2. Initialize default data
+zou init-data
+
+# 3. Verify setup
+zou is-db-ready
+```
+
+### Upgrading Zou
+
+```bash
+# 1. Backup database
+zou dump-database --store
+
+# 2. Upgrade schema
+zou upgrade-db
+
+# 3. Verify
+zou is-db-ready
+```
+
+### Development Reset
+
+```bash
+# Complete reset for development
+zou reset-db
+zou init-data
+```
+
+### Regular Maintenance
+
+```bash
+# Monthly maintenance routine
+zou remove-old-data --days 90
+zou clean-auth-tokens
+zou clear-memory-cache
+```
+
+## Troubleshooting
+
+### Migration Issues
+
+If migrations fail or get out of sync:
+
+```bash
+# Check current revision
+zou is-db-ready
+
+# Stamp to correct revision (if needed)
+zou stamp-db --revision <correct_revision>
+
+# Try upgrade again
+zou upgrade-db
+```
+
+### Database Connection Issues
+
+Ensure your environment variables are set correctly:
+
+```bash
+export DB_HOST=localhost
+export DB_PORT=5432
+export DB_NAME=zoudb
+export DB_USERNAME=zou
+export DB_PASSWORD=yourpassword
+```
+
+## Next Steps
+
+- [Admin Commands](/cli/admin-commands) - User and system administration
+- [CLI Overview](/cli/overview) - General CLI usage and configuration

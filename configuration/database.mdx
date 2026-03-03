@@ -1,0 +1,461 @@
+---
+title: Database Configuration
+description: PostgreSQL setup, connection configuration, migrations, and pool settings for Zou
+---
+
+Zou uses PostgreSQL as its database backend with SQLAlchemy as the ORM. This guide covers database setup, configuration, and maintenance.
+
+## Prerequisites
+
+Zou requires:
+- PostgreSQL 10 or higher
+- A dedicated database and user account
+- Network connectivity between Zou and PostgreSQL
+
+## Database Setup
+
+### 1. Create Database and User
+
+Connect to PostgreSQL and create a database and user:
+
+```sql
+CREATE DATABASE zoudb;
+CREATE USER zouuser WITH ENCRYPTED PASSWORD 'secure-password';
+GRANT ALL PRIVILEGES ON DATABASE zoudb TO zouuser;
+```
+
+### 2. Configure Environment Variables
+
+Set the database connection parameters:
+
+```bash
+export DB_HOST="localhost"
+export DB_PORT="5432"
+export DB_USERNAME="zouuser"
+export DB_PASSWORD="secure-password"
+export DB_DATABASE="zoudb"
+export DB_DRIVER="postgresql+psycopg"  # Default, psycopg3
+```
+
+### 3. Initialize Database Schema
+
+Run the database initialization command:
+
+```bash
+zou init-db
+```
+
+This command:
+1. Creates all required tables using Flask-Migrate (Alembic)
+2. Applies all migration files from `zou/migrations/versions/`
+3. Sets up initial database schema
+
+### 4. Initialize Base Data
+
+Create the minimal required data:
+
+```bash
+zou init-data
+```
+
+This creates essential records like project statuses and task types.
+
+### 5. Create Admin User
+
+Create an admin user to access the API:
+
+```bash
+zou create-admin admin@example.com --password MySecurePassword123
+```
+
+## Connection Configuration
+
+### Basic Connection Parameters
+
+<ParamField path="DB_DRIVER" type="string" default="postgresql+psycopg">
+  SQLAlchemy database driver.
+  
+  - `postgresql+psycopg` - psycopg3 (recommended, default)
+  - `postgresql+psycopg2` - psycopg2 (legacy)
+</ParamField>
+
+<ParamField path="DB_HOST" type="string" default="localhost">
+  Database server hostname or IP address.
+</ParamField>
+
+<ParamField path="DB_PORT" type="string" default="5432">
+  Database server port.
+</ParamField>
+
+<ParamField path="DB_USERNAME" type="string" default="postgres">
+  Database username for authentication.
+</ParamField>
+
+<ParamField path="DB_PASSWORD" type="string" default="mysecretpassword">
+  Database password for authentication.
+</ParamField>
+
+<ParamField path="DB_DATABASE" type="string" default="zoudb">
+  Name of the database to connect to.
+</ParamField>
+
+### Connection URI
+
+The connection URI is automatically generated from the configuration:
+
+```python
+# From zou/app/utils/dbhelpers.py
+from sqlalchemy.engine.url import URL
+
+DATABASE = {
+    "drivername": "postgresql+psycopg",
+    "host": "localhost",
+    "port": "5432",
+    "username": "zouuser",
+    "password": "secure-password",
+    "database": "zoudb",
+}
+
+SQLALCHEMY_DATABASE_URI = URL.create(**DATABASE).render_as_string(hide_password=False)
+# Result: postgresql+psycopg://zouuser:secure-password@localhost:5432/zoudb
+```
+
+## Connection Pool Settings
+
+Zou uses SQLAlchemy's connection pooling to manage database connections efficiently. These settings are critical for production performance.
+
+### Pool Configuration
+
+<ParamField path="DB_POOL_SIZE" type="integer" default="30">
+  Number of connections to maintain in the pool.
+  
+  **Recommendations:**
+  - Development: 5-10
+  - Production (small): 20-30
+  - Production (large): 50-100
+  
+  Consider: concurrent users × average requests per user
+</ParamField>
+
+<ParamField path="DB_MAX_OVERFLOW" type="integer" default="60">
+  Maximum connections beyond pool_size.
+  
+  Total max connections = `DB_POOL_SIZE + DB_MAX_OVERFLOW`
+  
+  Typically set to 2× pool_size for burst traffic.
+</ParamField>
+
+<ParamField path="DB_POOL_PRE_PING" type="boolean" default="True">
+  Test connections before use to prevent stale connection errors.
+  
+  Adds slight overhead but prevents errors. **Recommended: enabled**
+</ParamField>
+
+<ParamField path="DB_POOL_RECYCLE" type="integer" default="3600">
+  Recycle connections after N seconds (default: 1 hour).
+  
+  Prevents issues with:
+  - Database connection timeouts
+  - Network firewalls closing idle connections
+  - Long-lived connection problems
+  
+  Set lower than your database's connection timeout.
+</ParamField>
+
+<ParamField path="DB_POOL_RESET_ON_RETURN" type="string" default="commit">
+  How to reset connections when returned to pool.
+  
+  **Options:**
+  - `commit` - Commit any pending transactions (recommended)
+  - `rollback` - Roll back any pending transactions
+  - `none` - No reset (not recommended)
+  
+  Ensures clean state between requests.
+</ParamField>
+
+### Example Pool Configuration
+
+```python
+# From zou/app/config.py
+SQLALCHEMY_ENGINE_OPTIONS = {
+    "pool_size": 30,
+    "max_overflow": 60,
+    "pool_pre_ping": True,
+    "pool_recycle": 3600,
+    "pool_reset_on_return": "commit",
+}
+```
+
+### Production Pool Sizing
+
+**Formula for pool sizing:**
+
+```
+pool_size = (concurrent_users × requests_per_second) / query_time
+```
+
+**Example:**
+- 100 concurrent users
+- 2 requests per second per user
+- 50ms average query time
+
+```
+pool_size = (100 × 2) / (1000ms / 50ms) = 10 connections
+```
+
+Add headroom: set `DB_POOL_SIZE=30` and `DB_MAX_OVERFLOW=60`
+
+<Warning>
+Make sure PostgreSQL's `max_connections` is higher than:
+```
+(DB_POOL_SIZE + DB_MAX_OVERFLOW) × number_of_zou_instances
+```
+
+Default PostgreSQL `max_connections` is 100.
+</Warning>
+
+## Database Migrations
+
+Zou uses Flask-Migrate (built on Alembic) for database schema migrations.
+
+### Migration Commands
+
+#### Check Database Status
+
+```bash
+zou is-db-ready
+```
+
+Returns whether the database is initialized.
+
+#### Initialize Database
+
+```bash
+zou init-db
+```
+
+Creates all tables by applying migrations.
+
+#### Upgrade Database Schema
+
+```bash
+zou upgrade-db
+```
+
+Applies any new migrations. Run after upgrading Zou.
+
+```bash
+# Disable telemetry
+zou upgrade-db --no-telemetry
+```
+
+#### Downgrade Database (Development)
+
+```bash
+# Downgrade to previous revision
+zou downgrade-db --revision -1
+
+# Downgrade to specific revision
+zou downgrade-db --revision abc123def456
+```
+
+<Warning>Downgrading can cause data loss. Only use in development.</Warning>
+
+#### Create Migration (Development)
+
+```bash
+# Auto-generate migration from model changes
+zou migrate-db --message "Add new field to tasks"
+```
+
+This generates a new migration file in `zou/migrations/versions/`.
+
+#### Reset Database
+
+```bash
+# Drop all tables and recreate
+zou reset-db
+```
+
+<Warning>This deletes ALL data. Only use in development.</Warning>
+
+```bash
+# Drop tables only
+zou clear-db
+```
+
+### Migration Files Location
+
+Migrations are stored in:
+
+```
+zou/migrations/
+├── env.py              # Alembic environment configuration
+├── versions/           # Migration files
+│   ├── 003be8a91001_add_start_and_end_dates_to_projects.py
+│   ├── 0596674df51d_add_department_mentions_to_comments.py
+│   └── ...
+└── utils/              # Migration utilities
+```
+
+### Migration File Structure
+
+```python
+# Example migration file
+"""Add start and end dates to projects
+
+Revision ID: 003be8a91001
+Revises: previous_revision_id
+Create Date: 2023-01-15 10:30:00
+"""
+
+from alembic import op
+import sqlalchemy as sa
+
+def upgrade():
+    op.add_column('project', 
+        sa.Column('start_date', sa.Date(), nullable=True))
+    op.add_column('project', 
+        sa.Column('end_date', sa.Date(), nullable=True))
+
+def downgrade():
+    op.drop_column('project', 'end_date')
+    op.drop_column('project', 'start_date')
+```
+
+### Custom Migration Configuration
+
+The migration environment is configured in `zou/migrations/env.py`:
+
+```python
+def run_migrations_online():
+    connectable = create_engine(url, poolclass=pool.NullPool)
+    with connectable.connect() as connection:
+        context.configure(
+            connection=connection,
+            target_metadata=db.metadata,
+            process_revision_directives=process_revision_directives,
+            render_item=render_item,
+            include_object=include_object,
+        )
+        with context.begin_transaction():
+            context.run_migrations()
+```
+
+## Database Maintenance
+
+### Backup Database
+
+```bash
+# Dump database to file
+zou dump-database
+
+# Dump and store to object storage
+zou dump-database --store
+```
+
+### Clear Old Data
+
+```bash
+# Remove old events, notifications, and login logs (>90 days)
+zou remove-old-data --days 90
+```
+
+### Verify Database Connection
+
+From zou/app/utils/dbhelpers.py:587:
+
+```python
+def is_init():
+    """Check if database is initialized."""
+    from zou.app import db
+    from zou.app.models.project_status import ProjectStatus
+    
+    return (
+        inspect(db.engine).has_table("person") and 
+        db.session.query(ProjectStatus).count() == 2
+    )
+```
+
+## Troubleshooting
+
+### Connection Refused
+
+**Error:** `psycopg.OperationalError: connection refused`
+
+**Solutions:**
+1. Check PostgreSQL is running: `systemctl status postgresql`
+2. Verify host and port: `psql -h localhost -p 5432 -U zouuser -d zoudb`
+3. Check firewall rules
+4. Verify `postgresql.conf` listen_addresses
+
+### Too Many Connections
+
+**Error:** `FATAL: remaining connection slots are reserved`
+
+**Solutions:**
+1. Increase PostgreSQL `max_connections` in `postgresql.conf`
+2. Reduce `DB_POOL_SIZE` and `DB_MAX_OVERFLOW`
+3. Check for connection leaks in application code
+
+### Stale Connections
+
+**Error:** `server closed the connection unexpectedly`
+
+**Solutions:**
+1. Enable `DB_POOL_PRE_PING=True`
+2. Lower `DB_POOL_RECYCLE` (try 300-600 seconds)
+3. Increase PostgreSQL timeout settings
+
+### Slow Queries
+
+**Solutions:**
+1. Enable PostgreSQL query logging:
+   ```sql
+   ALTER DATABASE zoudb SET log_min_duration_statement = 1000;
+   ```
+2. Check missing indexes:
+   ```sql
+   SELECT schemaname, tablename, attname, n_distinct, correlation
+   FROM pg_stats
+   WHERE schemaname = 'public'
+   ORDER BY abs(correlation) DESC;
+   ```
+3. Run `ANALYZE` to update statistics:
+   ```sql
+   ANALYZE;
+   ```
+
+### Migration Conflicts
+
+**Error:** `Target database is not up to date`
+
+**Solutions:**
+```bash
+# Check current revision
+zou stamp-db
+
+# Force to specific revision (if needed)
+zou stamp-db --revision abc123def456
+
+# Then upgrade
+zou upgrade-db
+```
+
+## Performance Tips
+
+1. **Use connection pooling** - Default settings work well for most deployments
+2. **Enable pre-ping** - Prevents stale connection errors
+3. **Monitor pool usage** - Watch for pool exhaustion in logs
+4. **Regular vacuuming** - PostgreSQL autovacuum should be enabled
+5. **Add indexes** - Zou includes performance indexes in migrations
+6. **Optimize queries** - Use query profiling for slow endpoints
+
+## Security Best Practices
+
+1. **Use strong passwords** - Never use default passwords in production
+2. **Restrict network access** - Firewall PostgreSQL to only Zou servers
+3. **Use SSL connections** - Configure PostgreSQL SSL and use `sslmode=require`
+4. **Regular backups** - Automate database backups
+5. **Principle of least privilege** - Database user should only have necessary permissions
+6. **Update regularly** - Keep PostgreSQL updated with security patches

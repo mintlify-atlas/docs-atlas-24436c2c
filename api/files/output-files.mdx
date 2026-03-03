@@ -1,0 +1,414 @@
+---
+title: Output Files
+description: Learn how to create and manage published output files in Kitsu
+---
+
+## Overview
+
+Output files are published versions of working files that represent completed or approved work. They are created when artists are satisfied with their working files and track the source working file, output type, task type, and revision information.
+
+## Output File Model
+
+Output files contain the following key properties:
+
+- **id**: Unique identifier (UUID)
+- **name**: File name (default: "main")
+- **revision**: Version number (auto-incremented)
+- **path**: Full file path generated from template
+- **entity_id**: Associated entity (asset/shot)
+- **asset_instance_id**: For instance-specific outputs (optional)
+- **temporal_entity_id**: For instance context (shot/scene)
+- **output_type_id**: Type of output (cache, render, etc.)
+- **task_type_id**: Task department
+- **person_id**: Author
+- **source_file_id**: Source working file
+- **file_status_id**: File status
+- **representation**: File representation/format
+- **extension**: File extension
+- **comment**: Description
+- **nb_elements**: Number of elements (for sequences)
+- **created_at**: Creation timestamp
+- **updated_at**: Last modification timestamp
+
+## Core Operations
+
+### Create Entity Output File
+
+Create a new output file for an entity:
+
+```python
+POST /api/data/entities/{entity_id}/output-files/new
+```
+
+**Request Body:**
+
+```json
+{
+  "name": "main",
+  "output_type_id": "a24a6ea4-ce75-4665-a070-57453082c25",
+  "task_type_id": "b35b7fb5-df86-5776-b181-68564193d36",
+  "working_file_id": "c46c8gc6-eg97-6887-c292-79675204e47",
+  "comment": "Final render",
+  "representation": "mp4",
+  "extension": ".mp4",
+  "revision": 0  // 0 = auto-increment
+}
+```
+
+**Response:**
+
+```json
+{
+  "id": "d57d9hd7-fh08-7998-d403-80786315f58",
+  "name": "main",
+  "revision": 1,
+  "path": "/project/asset/output/main_v001.mp4",
+  "folder_path": "/project/asset/output",
+  "file_name": "main_v001.mp4",
+  "entity_id": "a24a6ea4-ce75-4665-a070-57453082c25",
+  "output_type_id": "a24a6ea4-ce75-4665-a070-57453082c25",
+  "task_type_id": "b35b7fb5-df86-5776-b181-68564193d36",
+  "created_at": "2023-01-01T12:00:00Z"
+}
+```
+
+Source: `zou/app/blueprints/files/resources.py:1114-1375`
+
+### Create Instance Output File
+
+Create an output file for an asset instance in a specific shot:
+
+```python
+POST /api/data/asset-instances/{asset_instance_id}/entities/{temporal_entity_id}/output-files/new
+```
+
+**Request Body:**
+
+```json
+{
+  "name": "main",
+  "output_type_id": "a24a6ea4-ce75-4665-a070-57453082c25",
+  "task_type_id": "b35b7fb5-df86-5776-b181-68564193d36",
+  "working_file_id": "c46c8gc6-eg97-6887-c292-79675204e47",
+  "comment": "Character cache for shot",
+  "representation": "abc",
+  "extension": ".abc"
+}
+```
+
+Source: `zou/app/blueprints/files/resources.py:1378-1662`
+
+### Get Last Output Files
+
+Retrieve the latest revisions of output files for an entity:
+
+```python
+GET /api/data/entities/{entity_id}/output-files/last-revisions
+```
+
+**Query Parameters:**
+
+- `output_type_id` (optional): Filter by output type
+- `task_type_id` (optional): Filter by task type  
+- `representation` (optional): Filter by representation
+- `file_status_id` (optional): Filter by file status
+- `name` (optional): Filter by file name
+
+**Response:**
+
+```json
+[
+  {
+    "id": "d57d9hd7-fh08-7998-d403-80786315f58",
+    "name": "main",
+    "revision": 2,
+    "path": "/project/asset/output/main_v002.mp4",
+    "output_type_id": "a24a6ea4-ce75-4665-a070-57453082c25",
+    "task_type_id": "b35b7fb5-df86-5776-b181-68564193d36",
+    "updated_at": "2023-01-02T14:30:00Z"
+  }
+]
+```
+
+Source: `zou/app/blueprints/files/resources.py:1842-1954`
+
+### Get All Output Files
+
+Retrieve all output files for an entity with filters:
+
+```python
+GET /api/data/entities/{entity_id}/output-files
+```
+
+**Query Parameters:**
+
+- `output_type_id` (optional)
+- `task_type_id` (optional)
+- `representation` (optional)
+- `file_status_id` (optional)
+- `name` (optional)
+
+Source: `zou/app/blueprints/files/resources.py:2522-2639`
+
+## Output Types
+
+### Get Entity Output Types
+
+Get all output types available for an entity:
+
+```python
+GET /api/data/entities/{entity_id}/output-types
+```
+
+**Response:**
+
+```json
+[
+  {
+    "id": "a24a6ea4-ce75-4665-a070-57453082c25",
+    "name": "Cache",
+    "short_name": "CACHE"
+  },
+  {
+    "id": "b35b7fb5-df86-5776-b181-68564193d36",
+    "name": "Render",
+    "short_name": "RENDER"
+  }
+]
+```
+
+Source: `zou/app/blueprints/files/resources.py:2082-2139`
+
+### Get Output Files by Type
+
+Get all output files of a specific type:
+
+```python
+GET /api/data/entities/{entity_id}/output-types/{output_type_id}/output-files
+```
+
+**Query Parameters:**
+
+- `representation` (optional): Filter by representation
+
+Source: `zou/app/blueprints/files/resources.py:2213-2297`
+
+## File Paths
+
+### Generate Output File Path
+
+Generate an output file path from the file tree template:
+
+```python
+POST /api/data/entities/{entity_id}/output-file-path
+```
+
+**Request Body:**
+
+```json
+{
+  "name": "main",
+  "output_type_id": "a24a6ea4-ce75-4665-a070-57453082c25",
+  "task_type_id": "b35b7fb5-df86-5776-b181-68564193d36",
+  "representation": "mp4",
+  "extension": ".mp4",
+  "revision": 0,
+  "separator": "/"
+}
+```
+
+**Response:**
+
+```json
+{
+  "folder_path": "/project/asset/output",
+  "file_name": "main_v001.mp4"
+}
+```
+
+Source: `zou/app/blueprints/files/resources.py:383-525`
+
+## Revision Management
+
+### Get Next Revision
+
+Get the next available revision number:
+
+```python
+POST /api/data/entities/{entity_id}/output-files/next-revision
+```
+
+**Request Body:**
+
+```json
+{
+  "name": "main",
+  "output_type_id": "a24a6ea4-ce75-4665-a070-57453082c25",
+  "task_type_id": "b35b7fb5-df86-5776-b181-68564193d36"
+}
+```
+
+**Response:**
+
+```json
+{
+  "next_revision": 3
+}
+```
+
+Source: `zou/app/blueprints/files/resources.py:1665-1743`
+
+## Asset Instances
+
+### Get Instance Output Types
+
+Get output types for an asset instance:
+
+```python
+GET /api/data/asset-instances/{asset_instance_id}/entities/{temporal_entity_id}/output-types
+```
+
+Source: `zou/app/blueprints/files/resources.py:2142-2210`
+
+### Get Instance Output Files
+
+Retrieve output files for an instance:
+
+```python
+GET /api/data/asset-instances/{asset_instance_id}/entities/{temporal_entity_id}/output-files/last-revisions
+```
+
+**Query Parameters:** Same as entity output files
+
+Source: `zou/app/blueprints/files/resources.py:1957-2079`
+
+### Get Instance Output Type Files
+
+Get files for a specific output type:
+
+```python
+GET /api/data/asset-instances/{asset_instance_id}/entities/{temporal_entity_id}/output-types/{output_type_id}/output-files
+```
+
+Source: `zou/app/blueprints/files/resources.py:2300-2401`
+
+## Project-Level Queries
+
+### Get Project Output Files
+
+Retrieve all output files for a project:
+
+```python
+GET /api/data/projects/{project_id}/output-files
+```
+
+**Query Parameters:**
+
+- `output_type_id` (optional)
+- `task_type_id` (optional)
+- `representation` (optional)
+- `file_status_id` (optional)
+- `name` (optional)
+
+Source: `zou/app/blueprints/files/resources.py:2404-2519`
+
+## File Status
+
+Output files have a status field that can be used to track approval states:
+
+- Default status is configured in `DEFAULT_FILE_STATUS` config
+- Custom file statuses can be created
+- Filter output files by status using `file_status_id` parameter
+
+Source: `zou/app/services/files_service.py:69-79`
+
+## Output File Properties
+
+### Representation
+
+The `representation` field categorizes different formats of the same output:
+
+- "mp4" - Video format
+- "abc" - Alembic cache
+- "fbx" - FBX format
+- "exr" - OpenEXR image sequence
+
+### Number of Elements
+
+The `nb_elements` field tracks:
+
+- Number of frames in a sequence
+- Number of files in a batch
+- Default is 1 for single files
+
+## Best Practices
+
+### Output Type Organization
+
+- Use descriptive output types (Cache, Render, Texture, etc.)
+- Create output types that match your pipeline
+- Use consistent naming across projects
+
+### Revision Strategy
+
+- Let revisions auto-increment (set revision=0)
+- Keep revision history for rollback capability
+- Latest revisions are fetched via "last-revisions" endpoints
+
+### Instance vs Entity Outputs
+
+- **Entity outputs**: General outputs for the entity (asset/shot)
+- **Instance outputs**: Specific to asset instance in a shot
+- Use instances for character caches, prop placements, etc.
+
+## Example Workflow
+
+```python
+import requests
+
+# 1. Create working file first
+working_file_response = requests.post(
+    f"{base_url}/api/data/tasks/{task_id}/working-files/new",
+    json={"name": "main", "software_id": software_id},
+    headers={"Authorization": f"Bearer {token}"}
+)
+working_file = working_file_response.json()
+
+# 2. Upload working file content
+with open("scene.blend", "rb") as f:
+    requests.post(
+        f"{base_url}/api/data/working-files/{working_file['id']}/file",
+        files={"file": f},
+        headers={"Authorization": f"Bearer {token}"}
+    )
+
+# 3. Create output file when ready to publish
+output_response = requests.post(
+    f"{base_url}/api/data/entities/{entity_id}/output-files/new",
+    json={
+        "name": "main",
+        "working_file_id": working_file["id"],
+        "output_type_id": cache_output_type_id,
+        "task_type_id": modeling_task_type_id,
+        "comment": "Final approved cache",
+        "representation": "abc",
+        "extension": ".abc",
+        "revision": 0  # Auto-increment
+    },
+    headers={"Authorization": f"Bearer {token}"}
+)
+output_file = output_response.json()
+
+# 4. Get latest outputs for entity
+latest = requests.get(
+    f"{base_url}/api/data/entities/{entity_id}/output-files/last-revisions",
+    params={"output_type_id": cache_output_type_id},
+    headers={"Authorization": f"Bearer {token}"}
+).json()
+```
+
+## Related Resources
+
+- [Working Files](/api/files/working-files) - Work-in-progress files
+- [Preview Files](/api/files/preview-files) - Preview media
+- [Tasks](/api/tasks/overview) - Task management

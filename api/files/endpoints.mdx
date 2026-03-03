@@ -1,0 +1,306 @@
+---
+title: Files API Endpoints
+description: Complete reference of all file and preview API endpoints
+---
+
+## Working Files
+
+### File Management
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/data/files/{file_id}` | Get working or output file info |
+| GET | `/api/data/working-files/{working_file_id}/file` | Download working file |
+| POST | `/api/data/working-files/{working_file_id}/file` | Upload working file content |
+
+### Task Working Files
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/data/tasks/{task_id}/working-files` | List all working file revisions |
+| POST | `/api/data/tasks/{task_id}/working-files/new` | Create new working file revision |
+| GET | `/api/data/tasks/{task_id}/working-files/last-revisions` | Get latest revision per file name |
+| POST | `/api/data/tasks/{task_id}/working-file-path` | Generate working file path |
+
+### Entity Working Files
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/data/entities/{entity_id}/working-files` | Get working files for entity |
+
+### Working File Actions
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| PUT | `/api/actions/working-files/{working_file_id}/comment` | Update working file comment |
+| PUT | `/api/actions/working-files/{working_file_id}/modified` | Update modification timestamp |
+
+## Output Files
+
+### Entity Output Files
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/data/entities/{entity_id}/output-files/new` | Create new entity output file |
+| POST | `/api/data/entities/{entity_id}/output-files/next-revision` | Get next revision number |
+| GET | `/api/data/entities/{entity_id}/output-files/last-revisions` | Get latest output file revisions |
+| GET | `/api/data/entities/{entity_id}/output-files` | Get all output files for entity |
+| POST | `/api/data/entities/{entity_id}/output-file-path` | Generate output file path |
+
+### Entity Output Types
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/data/entities/{entity_id}/output-types` | Get output types for entity |
+| GET | `/api/data/entities/{entity_id}/output-types/{output_type_id}/output-files` | Get output files by type |
+
+### Instance Output Files
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/data/asset-instances/{asset_instance_id}/entities/{temporal_entity_id}/output-files/new` | Create instance output file |
+| POST | `/api/data/asset-instances/{asset_instance_id}/entities/{temporal_entity_id}/output-files/next-revision` | Get next revision |
+| GET | `/api/data/asset-instances/{asset_instance_id}/entities/{temporal_entity_id}/output-files/last-revisions` | Get latest revisions |
+| GET | `/api/data/asset-instances/{asset_instance_id}/output-files` | Get all instance output files |
+| POST | `/api/data/asset-instances/{asset_instance_id}/entities/{temporal_entity_id}/output-file-path` | Generate output file path |
+
+### Instance Output Types
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/data/asset-instances/{asset_instance_id}/entities/{temporal_entity_id}/output-types` | Get instance output types |
+| GET | `/api/data/asset-instances/{asset_instance_id}/entities/{temporal_entity_id}/output-types/{output_type_id}/output-files` | Get files by type |
+
+### Project Output Files
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/data/projects/{project_id}/output-files` | Get all project output files |
+
+## Preview Files
+
+### Preview Upload
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/pictures/preview-files/{preview_file_id}` | Upload preview file |
+| POST | `/api/actions/tasks/{task_id}/batch-comment` | Create comments with preview files |
+| POST | `/api/actions/tasks/batch-comment` | Create comments for multiple tasks |
+
+### Preview Download
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/movies/originals/preview-files/{preview_file_id}.mp4` | Download preview movie |
+| GET | `/movies/originals/preview-files/{preview_file_id}/download` | Download movie as attachment |
+| GET | `/movies/low/preview-files/{preview_file_id}.mp4` | Download low-def movie |
+| GET | `/pictures/originals/preview-files/{preview_file_id}.{extension}` | Download preview file |
+| GET | `/pictures/originals/preview-files/{preview_file_id}/download` | Download as attachment |
+
+### Thumbnails
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/pictures/thumbnails/preview-files/{preview_file_id}.png` | Get rectangle thumbnail |
+| GET | `/pictures/thumbnails-square/preview-files/{preview_file_id}.png` | Get square thumbnail |
+| GET | `/pictures/originals/preview-files/{preview_file_id}.png` | Get original resolution |
+| GET | `/pictures/previews/preview-files/{preview_file_id}.png` | Get preview size image |
+| GET | `/movies/tiles/preview-files/{preview_file_id}.png` | Get tile sprite for scrubbing |
+
+### Preview Actions
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| PUT | `/api/actions/preview-files/{preview_file_id}/set-main-preview` | Set as entity main preview |
+| PUT | `/api/actions/preview-files/{preview_file_id}/update-position` | Change preview order |
+| PUT | `/api/actions/preview-files/{preview_file_id}/update-annotations` | Update annotations |
+| GET | `/api/actions/preview-files/{preview_file_id}/extract-frame` | Extract frame from movie |
+| GET | `/api/actions/preview-files/{preview_file_id}/extract-tile` | Extract tile sprite |
+
+### Preview Management
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/data/playlists/preview-files/running` | Get processing/broken previews |
+
+## Preview Background Files
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/pictures/preview-background-files/{preview_background_file_id}` | Upload HDR background |
+| GET | `/pictures/preview-background-files/{preview_background_file_id}.{extension}` | Download background file |
+| GET | `/pictures/thumbnails/preview-background-files/{preview_background_file_id}.png` | Get background thumbnail |
+
+## Attachment Files
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/pictures/thumbnails/attachment-files/{attachment_file_id}.png` | Get attachment thumbnail |
+
+## Thumbnails (Other)
+
+### Organisation Thumbnails
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/pictures/thumbnails/organisations/{organisation_id}` | Upload organisation thumbnail |
+| GET | `/pictures/thumbnails/organisations/{organisation_id}.png` | Get organisation thumbnail |
+
+### Project Thumbnails
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/pictures/thumbnails/projects/{project_id}` | Upload project thumbnail |
+| GET | `/pictures/thumbnails/projects/{project_id}.png` | Get project thumbnail |
+
+### Person Thumbnails
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/pictures/thumbnails/persons/{person_id}` | Upload person avatar |
+| GET | `/pictures/thumbnails/persons/{person_id}.png` | Get person avatar |
+
+## File Tree
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/actions/projects/{project_id}/set-file-tree` | Set file tree template |
+
+## Utility
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/data/entities/guess_from_path` | Guess entity from file path |
+
+## Query Parameters
+
+### Working Files
+
+**GET /api/data/entities/{entity_id}/working-files**
+
+- `task_id` (optional): Filter by task
+- `name` (optional): Filter by file name
+
+### Output Files
+
+**GET /api/data/entities/{entity_id}/output-files**
+**GET /api/data/entities/{entity_id}/output-files/last-revisions**
+**GET /api/data/projects/{project_id}/output-files**
+
+- `output_type_id` (optional): Filter by output type
+- `task_type_id` (optional): Filter by task type
+- `representation` (optional): Filter by representation
+- `file_status_id` (optional): Filter by file status
+- `name` (optional): Filter by file name
+
+**GET /api/data/asset-instances/{asset_instance_id}/output-files**
+
+- `temporal_entity_id` (optional): Filter by temporal entity
+- Plus all filters from above
+
+**GET /api/data/entities/{entity_id}/output-types/{output_type_id}/output-files**
+
+- `representation` (optional): Filter by representation
+
+### Preview Files
+
+**POST /pictures/preview-files/{preview_file_id}**
+
+- `normalize` (optional): Enable video normalization (default: true)
+
+**GET /api/actions/preview-files/{preview_file_id}/extract-frame**
+
+- `frame_number` (optional): Frame to extract (default: 0)
+
+**PUT /api/actions/preview-files/{preview_file_id}/set-main-preview**
+
+- `frame_number` (optional): Extract specific frame for entity preview
+
+**GET /api/data/playlists/preview-files/running**
+
+- `cursor_preview_file_id` (optional): Pagination cursor
+- `limit` (optional): Max results
+
+## Response Codes
+
+### Success Codes
+
+- **200 OK**: Request successful
+- **201 Created**: Resource created successfully
+
+### Error Codes
+
+- **400 Bad Request**: Invalid parameters or malformed request
+- **404 Not Found**: Resource not found
+- **401 Unauthorized**: Authentication required
+- **403 Forbidden**: Insufficient permissions
+
+## Common Filters
+
+Many endpoints support filtering by:
+
+- **output_type_id**: Cache, Render, Texture, etc.
+- **task_type_id**: Modeling, Animation, Lighting, etc.
+- **file_status_id**: Approved, Pending, Rejected, etc.
+- **representation**: mp4, abc, fbx, exr, etc.
+- **name**: File name (main, cache, proxy, etc.)
+
+## File Storage
+
+File storage is handled through configurable backends:
+
+- **Local**: Files stored on server filesystem
+- **S3**: Amazon S3 or compatible object storage
+- **Swift**: OpenStack Swift object storage
+
+Configuration: `zou/app/config.py` - `FS_BACKEND` setting
+
+Source: `zou/app/stores/file_store.py`
+
+## Authentication
+
+All endpoints require JWT authentication:
+
+```bash
+curl -H "Authorization: Bearer YOUR_TOKEN" \
+  https://kitsu.example.com/api/data/files/{file_id}
+```
+
+See [Authentication](/api/auth/login) for details.
+
+## Rate Limiting
+
+File upload endpoints may have size and rate limits:
+
+- Check `config.MAX_UPLOAD_SIZE` for upload limits
+- Video normalization may timeout based on `JOB_QUEUE_TIMEOUT`
+- Large file uploads may require chunking
+
+## Permissions
+
+### Working Files
+
+- **Create**: Requires task access
+- **Read**: Requires project access
+- **Update**: Requires task action access
+
+### Output Files
+
+- **Create**: Requires project access
+- **Read**: Requires project access
+- **Update**: Requires manager access
+
+### Preview Files
+
+- **Upload**: Requires task action access
+- **Download**: Requires task access (or entity is shared)
+- **Annotate**: Requires manager, client, or supervisor access
+- **Set Main**: Requires project access
+
+## Related Resources
+
+- [Working Files](/api/files/working-files)
+- [Output Files](/api/files/output-files)
+- [Preview Files](/api/files/preview-files)
+- [Tasks](/api/tasks/overview)
+- [Comments](/api/comments/overview)

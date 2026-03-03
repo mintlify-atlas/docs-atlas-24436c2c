@@ -1,0 +1,605 @@
+---
+title: Preview Files
+description: Learn how to upload and manage preview files for task review and feedback
+---
+
+## Overview
+
+Preview files are media files (images, videos, or other formats) attached to tasks for review and feedback. They support automatic thumbnail generation, video normalization, annotations, and multiple revisions per task.
+
+## Preview File Model
+
+Preview files contain the following key properties:
+
+- **id**: Unique identifier (UUID)
+- **task_id**: Associated task
+- **revision**: Version number
+- **position**: Order within revision
+- **name**: Display name
+- **original_name**: Original filename
+- **extension**: File type (mp4, png, etc.)
+- **status**: Processing status (processing, ready, broken)
+- **source**: Upload source (webgui, api, etc.)
+- **file_size**: Size in bytes
+- **width**: Image/video width in pixels
+- **height**: Image/video height in pixels
+- **duration**: Video duration in seconds
+- **annotations**: Review annotations array
+- **person_id**: Uploader
+- **created_at**: Upload timestamp
+- **updated_at**: Last modification timestamp
+
+## Supported Formats
+
+### Pictures
+
+Supported extensions: `jpg`, `jpeg`, `jpe`, `png`
+
+- Automatic thumbnail generation (square and rectangle)
+- Original resolution preserved
+- Multiple size variants created
+
+### Movies
+
+Supported extensions: `mp4`, `mov`, `avi`, `mkv`, `webm`, `m4v`, `wmv`
+
+- Normalized to MP4 format
+- Automatic thumbnail extraction
+- Tile generation for scrubbing
+- Low-def version for faster streaming
+
+### Other Files
+
+Supported extensions: `pdf`, `psd`, `psb`, `ai`, `blend`, `ma`, `mb`, `hip`, `fbx`, `obj`, `glb`, `gltf`, `svg`, `exr`, and more
+
+- Stored as-is without processing
+- Direct download available
+
+Source: `zou/app/blueprints/previews/resources.py:44-88`
+
+## Upload Preview Files
+
+### Create Preview File Entry
+
+First, create a preview file entry via comment:
+
+```python
+POST /api/actions/tasks/{task_id}/batch-comment
+```
+
+**Request:** Multipart form data
+
+```python
+import requests
+
+# Prepare comment data with preview
+comments_data = [
+    {
+        "text": "Updated character animation",
+        "task_status_id": task_status_id
+    }
+]
+
+files = {
+    "comments": (None, json.dumps(comments_data)),
+    "preview_file-0-0": open("animation.mp4", "rb")
+}
+
+response = requests.post(
+    f"{base_url}/api/actions/tasks/{task_id}/batch-comment",
+    files=files,
+    headers={"Authorization": f"Bearer {token}"}
+)
+```
+
+Source: `zou/app/blueprints/previews/resources.py:555-599`
+
+### Upload to Existing Preview
+
+Upload file content to an existing preview entry:
+
+```python
+POST /pictures/preview-files/{preview_file_id}
+```
+
+**Request:** Multipart form data with file
+
+```bash
+curl -X POST \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "file=@preview.mp4" \
+  "https://kitsu.example.com/pictures/preview-files/{preview_file_id}"
+```
+
+**Query Parameters:**
+
+- `normalize` (optional): Enable video normalization (default: true)
+
+Source: `zou/app/blueprints/previews/resources.py:376-437`
+
+## Download Preview Files
+
+### Get Preview Movie
+
+Download the normalized MP4 video:
+
+```python
+GET /movies/originals/preview-files/{preview_file_id}.mp4
+```
+
+**Response:** Video file with caching headers
+
+Source: `zou/app/blueprints/previews/resources.py:658-700`
+
+### Get Low-Def Movie
+
+Download low-definition version for streaming:
+
+```python
+GET /movies/low/preview-files/{preview_file_id}.mp4
+```
+
+Falls back to full quality if low-def not available.
+
+Source: `zou/app/blueprints/previews/resources.py:703-751`
+
+### Download as Attachment
+
+Force download with original filename:
+
+```python
+GET /movies/originals/preview-files/{preview_file_id}/download
+```
+
+Source: `zou/app/blueprints/previews/resources.py:754-798`
+
+### Get Preview Image
+
+Download image preview:
+
+```python
+GET /pictures/originals/preview-files/{preview_file_id}.{extension}
+```
+
+Supported extensions: `png`, `pdf`, etc.
+
+Source: `zou/app/blueprints/previews/resources.py:801-865`
+
+## Thumbnails
+
+### Rectangle Thumbnail
+
+Get standard thumbnail (optimized for 16:9 aspect ratio):
+
+```python
+GET /pictures/thumbnails/preview-files/{preview_file_id}.png
+```
+
+Source: `zou/app/blueprints/previews/resources.py:1086-1089`
+
+### Square Thumbnail
+
+Get square thumbnail (for avatars, cards):
+
+```python
+GET /pictures/thumbnails-square/preview-files/{preview_file_id}.png
+```
+
+Source: `zou/app/blueprints/previews/resources.py:1106-1108`
+
+### Original Resolution
+
+Get full-resolution preview image:
+
+```python
+GET /pictures/originals/preview-files/{preview_file_id}.png
+```
+
+Source: `zou/app/blueprints/previews/resources.py:1111-1113`
+
+### Preview Size
+
+Get medium-resolution preview:
+
+```python
+GET /pictures/previews/preview-files/{preview_file_id}.png
+```
+
+Source: `zou/app/blueprints/previews/resources.py:1097-1103`
+
+### Tile Preview
+
+Get tile sprite for video scrubbing:
+
+```python
+GET /movies/tiles/preview-files/{preview_file_id}.png
+```
+
+Source: `zou/app/blueprints/previews/resources.py:1092-1094`
+
+## Preview Management
+
+### Set as Main Preview
+
+Set a preview as the entity's main preview:
+
+```python
+PUT /api/actions/preview-files/{preview_file_id}/set-main-preview
+```
+
+**Query Parameters:**
+
+- `frame_number` (optional): Extract specific frame from movie
+
+**Request Body:**
+
+```json
+{
+  "frame_number": 120  // Optional: for movie previews
+}
+```
+
+**Response:**
+
+```json
+{
+  "id": "entity-id",
+  "preview_file_id": "preview-file-id"
+}
+```
+
+Source: `zou/app/blueprints/previews/resources.py:1329-1399`
+
+### Update Preview Position
+
+Change the order of previews within a revision:
+
+```python
+PUT /api/actions/preview-files/{preview_file_id}/update-position
+```
+
+**Request Body:**
+
+```json
+{
+  "position": 2
+}
+```
+
+Source: `zou/app/blueprints/previews/resources.py:1402-1458`
+
+### Delete Preview File
+
+Use the deletion service to remove a preview:
+
+```python
+from zou.app.services import deletion_service
+
+deletion_service.remove_preview_file_by_id(preview_file_id)
+```
+
+Source: `zou/app/services/files_service.py:890-899`
+
+## Annotations
+
+### Update Annotations
+
+Add, update, or delete annotations on a preview:
+
+```python
+PUT /api/actions/preview-files/{preview_file_id}/update-annotations
+```
+
+**Request Body:**
+
+```json
+{
+  "additions": [
+    {
+      "time": 0,
+      "drawing": {
+        "objects": [
+          {
+            "type": "path",
+            "x": 100,
+            "y": 200,
+            "color": "#FF0000"
+          }
+        ]
+      }
+    }
+  ],
+  "updates": [
+    {
+      "time": 0,
+      "drawing": {
+        "objects": [
+          {
+            "id": "annotation-id",
+            "x": 150,
+            "y": 250
+          }
+        ]
+      }
+    }
+  ],
+  "deletions": [
+    {
+      "time": 0,
+      "objects": ["annotation-id-to-delete"]
+    }
+  ]
+}
+```
+
+**Response:** Updated preview file with annotations
+
+Source: `zou/app/blueprints/previews/resources.py:1461-1562`
+
+### Annotation Format
+
+Annotations are stored as an array of time-based drawings:
+
+```json
+[
+  {
+    "time": 0,  // Frame number or timestamp
+    "drawing": {
+      "objects": [
+        {
+          "id": "uuid",
+          "type": "path",
+          "x": 100,
+          "y": 200,
+          "color": "#FF0000"
+        }
+      ]
+    }
+  }
+]
+```
+
+Source: `zou/app/services/preview_files_service.py:413-579`
+
+## Video Processing
+
+### Normalization
+
+Videos are automatically normalized to:
+
+- **Format**: MP4 (H.264)
+- **Resolution**: Project or entity resolution (default: 1080p height)
+- **Frame rate**: Project or entity FPS (default: 25.00)
+- **Variants**: Full quality + low-def version
+
+Source: `zou/app/services/preview_files_service.py:185-336`
+
+### Processing Status
+
+Preview files have three statuses:
+
+- **processing**: Video is being normalized
+- **ready**: File is ready for viewing
+- **broken**: Processing failed
+
+Check status before displaying:
+
+```python
+preview_file = files_service.get_preview_file(preview_file_id)
+if preview_file["status"] == "ready":
+    # Display preview
+else:
+    # Show processing indicator
+```
+
+### Background Processing
+
+When job queue is enabled, video normalization happens asynchronously:
+
+```python
+# Upload returns immediately, processing happens in background
+queue_store.job_queue.enqueue(
+    preview_files_service.prepare_and_store_movie,
+    args=(preview_file_id, uploaded_movie_path, True),
+    job_timeout=int(config.JOB_QUEUE_TIMEOUT)
+)
+```
+
+Source: `zou/app/blueprints/previews/resources.py:241-270`
+
+## Advanced Features
+
+### Extract Frame from Movie
+
+Extract a specific frame from a video:
+
+```python
+GET /api/actions/preview-files/{preview_file_id}/extract-frame?frame_number=120
+```
+
+**Query Parameters:**
+
+- `frame_number` (optional): Frame to extract (default: 0)
+
+**Response:** PNG image of the frame
+
+Source: `zou/app/blueprints/previews/resources.py:1637-1694`
+
+### Extract Tile
+
+Generate or retrieve tile sprite for scrubbing:
+
+```python
+GET /api/actions/preview-files/{preview_file_id}/extract-tile
+```
+
+**Response:** Tile sprite PNG
+
+Source: `zou/app/blueprints/previews/resources.py:1697-1743`
+
+### Running Preview Files
+
+Get all previews currently processing or broken:
+
+```python
+GET /api/data/playlists/preview-files/running
+```
+
+**Query Parameters:**
+
+- `cursor_preview_file_id` (optional): Pagination cursor
+- `limit` (optional): Max results per page
+
+**Response:**
+
+```json
+[
+  {
+    "id": "preview-file-id",
+    "status": "processing",
+    "project_id": "project-id",
+    "task_type_id": "task-type-id",
+    "full_entity_name": "Asset > Character > Hero"
+  }
+]
+```
+
+Source: `zou/app/blueprints/previews/resources.py:1565-1634`
+
+## Preview Background Files
+
+### Upload HDR Background
+
+Upload an HDR background for preview compositing:
+
+```python
+POST /pictures/preview-background-files/{preview_background_file_id}
+```
+
+**Request:** Multipart form data with HDR file
+
+Supported extensions: `hdr`
+
+Source: `zou/app/blueprints/previews/resources.py:1746-1913`
+
+### Get Background File
+
+Download preview background:
+
+```python
+GET /pictures/preview-background-files/{preview_background_file_id}.{extension}
+```
+
+Source: `zou/app/blueprints/previews/resources.py:1915-1977`
+
+### Get Background Thumbnail
+
+Get thumbnail of background file:
+
+```python
+GET /pictures/thumbnails/preview-background-files/{preview_background_file_id}.png
+```
+
+Source: `zou/app/blueprints/previews/resources.py:1980-1993`
+
+## Best Practices
+
+### Revision Management
+
+- Preview revisions match comment revisions
+- Multiple previews can be in one revision
+- Use position to order previews within revision
+
+### Video Upload
+
+- Enable normalization for consistent playback
+- Wait for status=ready before displaying
+- Use low-def version for faster streaming
+- Check file_size before upload for large files
+
+### Thumbnails
+
+- Use square thumbnails for cards and lists
+- Use rectangle thumbnails for preview strips
+- Thumbnails are auto-generated for images and videos
+- Cache thumbnail URLs client-side
+
+### Annotations
+
+- Store annotations at preview level, not comment
+- Use time-based keys for video annotations
+- Generate unique IDs for annotation objects
+- Use additions/updates/deletions for atomic changes
+
+## Example Workflow
+
+```python
+import requests
+import json
+
+# 1. Create comment with preview
+comments_data = [{
+    "text": "Latest animation review",
+    "task_status_id": task_status_id
+}]
+
+files = {
+    "comments": (None, json.dumps(comments_data)),
+    "preview_file-0-0": open("animation.mp4", "rb")
+}
+
+response = requests.post(
+    f"{base_url}/api/actions/tasks/{task_id}/batch-comment",
+    files=files,
+    headers={"Authorization": f"Bearer {token}"}
+)
+
+comment = response.json()[0]
+preview_file = comment["preview_files"][0]
+
+# 2. Wait for processing (in real app, poll or use websockets)
+while True:
+    preview = requests.get(
+        f"{base_url}/api/data/preview-files/{preview_file['id']}",
+        headers={"Authorization": f"Bearer {token}"}
+    ).json()
+    
+    if preview["status"] == "ready":
+        break
+    elif preview["status"] == "broken":
+        raise Exception("Preview processing failed")
+    
+    time.sleep(2)
+
+# 3. Add annotations
+requests.put(
+    f"{base_url}/api/actions/preview-files/{preview_file['id']}/update-annotations",
+    json={
+        "additions": [{
+            "time": 120,
+            "drawing": {
+                "objects": [{
+                    "type": "text",
+                    "text": "Fix this pose",
+                    "x": 100,
+                    "y": 200
+                }]
+            }
+        }]
+    },
+    headers={"Authorization": f"Bearer {token}"}
+)
+
+# 4. Set as entity main preview
+requests.put(
+    f"{base_url}/api/actions/preview-files/{preview_file['id']}/set-main-preview",
+    json={"frame_number": 120},
+    headers={"Authorization": f"Bearer {token}"}
+)
+```
+
+## Related Resources
+
+- [Comments](/api/comments/overview) - Adding comments with previews
+- [Tasks](/api/tasks/overview) - Task review workflow
+- [Working Files](/api/files/working-files) - Source files

@@ -1,0 +1,189 @@
+---
+title: "Shots & Sequences Overview"
+description: "Understanding the shot and sequence hierarchy in Kitsu"
+---
+
+## Introduction
+
+The Shots & Sequences API provides endpoints for managing the temporal hierarchy of animation production. This includes episodes, sequences, scenes, and shots - the core building blocks of production planning.
+
+## Hierarchy Structure
+
+Kitsu organizes production into a clear hierarchy:
+
+```
+Project
+  └── Episode (for TV series)
+        └── Sequence
+              ├── Scene (optional, for scene-based workflows)
+              └── Shot
+```
+
+### Episodes
+
+Episodes represent the top level of organization for TV series or episodic content. Each episode can contain multiple sequences.
+
+**Key Properties:**
+- `name` - Episode identifier (e.g., "EP01")
+- `description` - Episode description
+- `status` - Episode status: `running`, `complete`, `standby`, or `canceled`
+- `project_id` - Parent project
+
+**Use Case:** For feature films, you typically won't use episodes. For TV series, each episode represents one complete episode of the show.
+
+### Sequences
+
+Sequences organize shots into logical groups. A sequence typically represents a continuous narrative segment or location.
+
+**Key Properties:**
+- `name` - Sequence identifier (e.g., "SQ01")
+- `description` - Sequence description
+- `parent_id` - Episode ID (for TV) or null (for films)
+- `project_id` - Parent project
+
+**Hierarchy:**
+- For **TV series**: Sequences belong to an episode
+- For **films**: Sequences belong directly to the project (no episode)
+
+### Scenes
+
+Scenes are optional entities used in scene-based workflows. They can be linked to shots to track which shots come from which scenes.
+
+**Key Properties:**
+- `name` - Scene identifier (e.g., "SC001")
+- `parent_id` - Sequence ID
+- `project_id` - Parent project
+
+**Use Case:** Some studios work with a scene breakdown before creating shots. Scenes can be linked to multiple shots, and shots can reference their source scene.
+
+### Shots
+
+Shots are the fundamental unit of production work. Each shot represents a specific camera angle or continuous piece of footage.
+
+**Key Properties:**
+- `name` - Shot identifier (e.g., "SH010")
+- `description` - Shot description
+- `nb_frames` - Number of frames in the shot
+- `parent_id` - Sequence ID
+- `project_id` - Parent project
+- `data` - Custom metadata (frame ranges, camera info, etc.)
+
+**Frame Data:**
+The `data` field can contain frame-related information:
+- `frame_in` - Starting frame number
+- `frame_out` - Ending frame number
+- `fps` - Frames per second
+
+## Entity Relationships
+
+### Tasks
+
+All temporal entities (episodes, sequences, scenes, shots) can have tasks associated with them. Tasks represent work to be done on that entity.
+
+### Assets
+
+Shots can be linked to assets through the **breakdown** (also called casting). This defines which assets appear in which shots.
+
+### Preview Files
+
+Shots can have preview files attached through their tasks, allowing review and feedback on shot work.
+
+## Workflow Examples
+
+### Feature Film Workflow
+
+1. Create sequences directly under the project
+2. Create shots under each sequence
+3. Assign tasks to shots
+4. Link assets to shots via breakdown
+
+### TV Series Workflow
+
+1. Create an episode
+2. Create sequences under the episode
+3. Create shots under each sequence
+4. Assign tasks to shots
+5. Link assets to shots via breakdown
+
+### Scene-Based Workflow
+
+1. Create sequences
+2. Create scenes under sequences
+3. Create shots under sequences
+4. Link shots to their source scenes
+5. Track which shots come from which scenes
+
+## Common Operations
+
+### Creating a Shot
+
+Shots are created within a sequence and require at minimum a name:
+
+```json
+POST /api/data/projects/{project_id}/shots
+{
+  "name": "SH010",
+  "sequence_id": "sequence-uuid",
+  "nb_frames": 120,
+  "description": "Character enters the room"
+}
+```
+
+### Getting Shots with Tasks
+
+To retrieve shots along with their associated tasks:
+
+```
+GET /api/data/shots/with-tasks?project_id={project_id}
+```
+
+This returns shots with embedded task information, useful for production dashboards.
+
+### Filtering by Episode
+
+For TV series, filter sequences or shots by episode:
+
+```
+GET /api/data/episodes/{episode_id}/sequences
+GET /api/data/episodes/{episode_id}/shots
+```
+
+## Statistics and Quotas
+
+The Shots API includes endpoints for production statistics:
+
+- **Episode Stats**: Task counts by status, task type, and episode
+- **Retake Stats**: Retake counts and evolution over time
+- **Quotas**: Production quotas tracking frames completed per person/team
+
+See the [Endpoints Reference](/api/shots/endpoints) for complete details on statistics endpoints.
+
+## Best Practices
+
+### Naming Conventions
+
+- Use consistent naming schemes across your production
+- Episode: `EP01`, `EP02`, etc.
+- Sequence: `SQ010`, `SQ020`, etc.
+- Shot: `SH010`, `SH020`, etc.
+
+### Frame Tracking
+
+Always set `nb_frames` on shots to enable:
+- Accurate quota tracking
+- Workload estimation
+- Production statistics
+
+### Status Management
+
+For episodes, use status to track production phases:
+- `running` - Currently in production
+- `complete` - Finished and delivered
+- `standby` - On hold
+- `canceled` - Not proceeding
+
+## Next Steps
+
+- [Sequence Management](/api/shots/sequences) - Detailed sequence operations
+- [Endpoints Reference](/api/shots/endpoints) - Complete API reference
+- [Tasks API](/api/tasks/overview) - Managing work on shots

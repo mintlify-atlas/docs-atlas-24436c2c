@@ -1,0 +1,1183 @@
+---
+title: People & Teams API Reference
+description: Complete endpoint reference for person and department management
+---
+
+## Person Endpoints
+
+### List Persons
+
+<api-endpoint method="get" path="/api/data/persons">
+  Retrieve all persons with optional filtering and pagination.
+</api-endpoint>
+
+**Query Parameters:**
+
+<ParamField query="page" type="integer">
+  Page number for pagination
+</ParamField>
+
+<ParamField query="limit" type="integer">
+  Number of results per page
+</ParamField>
+
+<ParamField query="relations" type="boolean" default="false">
+  Include related entities (departments, etc.)
+</ParamField>
+
+<ParamField query="with_pass_hash" type="boolean" default="false">
+  Include password hash (admin only)
+</ParamField>
+
+**Permissions:** All authenticated users (limited view for non-admins)
+
+**Response:**
+
+```json
+[
+  {
+    "id": "person-uuid",
+    "first_name": "Jane",
+    "last_name": "Smith",
+    "email": "jane.smith@studio.com",
+    "role": "user",
+    "active": true,
+    "departments": ["dept-uuid"],
+    "has_avatar": false,
+    "created_at": "2024-01-15T10:30:00Z",
+    "updated_at": "2024-01-15T10:30:00Z"
+  }
+]
+```
+
+---
+
+### Create Person
+
+<api-endpoint method="post" path="/api/data/persons">
+  Create a new person with the provided data.
+</api-endpoint>
+
+**Permissions:** Admin only
+
+**Request Body:**
+
+<ParamField body="first_name" type="string" required>
+  Person's first name
+</ParamField>
+
+<ParamField body="last_name" type="string" required>
+  Person's last name
+</ParamField>
+
+<ParamField body="email" type="string" format="email" required>
+  Person's email (can be null for bots)
+</ParamField>
+
+<ParamField body="password" type="string">
+  Password (will be encrypted)
+</ParamField>
+
+<ParamField body="role" type="string" default="user">
+  Role: `user`, `admin`, `supervisor`, `manager`, `client`, `vendor`
+</ParamField>
+
+<ParamField body="contract_type" type="string" default="open-ended">
+  Contract type: `open-ended`, `fixed-term`, `short-term`, `freelance`, `apprentice`, `internship`
+</ParamField>
+
+<ParamField body="active" type="boolean" default="true">
+  Whether the person is active
+</ParamField>
+
+<ParamField body="is_bot" type="boolean" default="false">
+  Whether this is a bot/service account
+</ParamField>
+
+<ParamField body="departments" type="array">
+  Array of department IDs
+</ParamField>
+
+<ParamField body="expiration_date" type="string" format="date">
+  Account expiration date (must be in the future)
+</ParamField>
+
+**Example Request:**
+
+```json
+{
+  "first_name": "John",
+  "last_name": "Doe",
+  "email": "john.doe@studio.com",
+  "password": "securePassword123",
+  "role": "user",
+  "departments": ["animation-dept-id"],
+  "timezone": "America/Los_Angeles"
+}
+```
+
+**Response:**
+
+```json
+{
+  "id": "person-uuid",
+  "first_name": "John",
+  "last_name": "Doe",
+  "email": "john.doe@studio.com",
+  "role": "user",
+  "active": true,
+  "departments": ["animation-dept-id"],
+  "created_at": "2024-01-15T10:30:00Z",
+  "updated_at": "2024-01-15T10:30:00Z"
+}
+```
+
+---
+
+### Get Person
+
+<api-endpoint method="get" path="/api/data/persons/{person_id}">
+  Retrieve a specific person by ID.
+</api-endpoint>
+
+**Path Parameters:**
+
+<ParamField path="person_id" type="string" format="uuid" required>
+  Person unique identifier
+</ParamField>
+
+**Query Parameters:**
+
+<ParamField query="relations" type="boolean" default="true">
+  Include related entities
+</ParamField>
+
+**Permissions:** All authenticated users (limited view for non-admins)
+
+---
+
+### Update Person
+
+<api-endpoint method="put" path="/api/data/persons/{person_id}">
+  Update a person's information.
+</api-endpoint>
+
+**Path Parameters:**
+
+<ParamField path="person_id" type="string" format="uuid" required>
+  Person unique identifier
+</ParamField>
+
+**Permissions:** 
+- Users can update their own profile (limited fields)
+- Admins can update any user
+- Protected accounts have restrictions
+
+**Request Body:** Same fields as Create Person (all optional)
+
+<Note>
+  Non-admin users cannot modify: `role`, `departments`, `active`, `is_bot`, `archived`, `studio_id`
+</Note>
+
+---
+
+### Delete Person
+
+<api-endpoint method="delete" path="/api/data/persons/{person_id}">
+  Delete a person from the system.
+</api-endpoint>
+
+**Path Parameters:**
+
+<ParamField path="person_id" type="string" format="uuid" required>
+  Person unique identifier
+</ParamField>
+
+**Query Parameters:**
+
+<ParamField query="force" type="boolean" default="false">
+  Force deletion even if person has associated data
+</ParamField>
+
+**Permissions:** Admin only (cannot delete yourself)
+
+---
+
+## Desktop Login Logs
+
+### Get Desktop Login Logs
+
+<api-endpoint method="get" path="/api/data/persons/{person_id}/desktop-login-logs">
+  Retrieve desktop login logs for a person.
+</api-endpoint>
+
+**Path Parameters:**
+
+<ParamField path="person_id" type="string" format="uuid" required>
+  Person unique identifier
+</ParamField>
+
+**Permissions:** User can view their own logs, managers can view all
+
+**Response:**
+
+```json
+[
+  {
+    "id": "log-uuid",
+    "person_id": "person-uuid",
+    "date": "2024-03-15T08:30:00Z"
+  }
+]
+```
+
+---
+
+### Create Desktop Login Log
+
+<api-endpoint method="post" path="/api/data/persons/{person_id}/desktop-login-logs">
+  Add a new desktop login log entry.
+</api-endpoint>
+
+**Path Parameters:**
+
+<ParamField path="person_id" type="string" format="uuid" required>
+  Person unique identifier
+</ParamField>
+
+**Request Body:**
+
+<ParamField body="date" type="string" format="date" required>
+  Login date
+</ParamField>
+
+**Permissions:** User can create their own logs, admins can create for anyone
+
+---
+
+## Presence Logs
+
+### Get Presence Logs
+
+<api-endpoint method="get" path="/api/data/persons/presence-logs/{month_date}">
+  Return a CSV file with presence logs for the given month.
+</api-endpoint>
+
+**Path Parameters:**
+
+<ParamField path="month_date" type="string" format="date" required>
+  Month in YYYY-MM format (e.g., "2024-03")
+</ParamField>
+
+**Permissions:** Admin only
+
+**Response:** CSV file with daily presence data for all active users
+
+---
+
+## Time Tracking
+
+### Get Time Spents
+
+<api-endpoint method="get" path="/api/data/persons/{person_id}/time-spents">
+  Get all time spents for a person, optionally filtered by date range.
+</api-endpoint>
+
+**Path Parameters:**
+
+<ParamField path="person_id" type="string" format="uuid" required>
+  Person unique identifier
+</ParamField>
+
+**Query Parameters:**
+
+<ParamField query="start_date" type="string" format="date">
+  Start date for range filter (requires end_date)
+</ParamField>
+
+<ParamField query="end_date" type="string" format="date">
+  End date for range filter (requires start_date)
+</ParamField>
+
+**Permissions:** Admin only
+
+---
+
+### Get Time Spents for Date
+
+<api-endpoint method="get" path="/api/data/persons/{person_id}/time-spents/{date}">
+  Get time spents for a specific date.
+</api-endpoint>
+
+**Path Parameters:**
+
+<ParamField path="person_id" type="string" format="uuid" required>
+  Person unique identifier
+</ParamField>
+
+<ParamField path="date" type="string" format="date" required>
+  Date in YYYY-MM-DD format
+</ParamField>
+
+**Permissions:** User can view their own, managers/supervisors can view team members (filtered by project/department)
+
+---
+
+### Get Year Time Spents
+
+<api-endpoint method="get" path="/api/data/persons/{person_id}/time-spents/year/{year}">
+  Get aggregated time spents for a year.
+</api-endpoint>
+
+**Path Parameters:**
+
+<ParamField path="person_id" type="string" format="uuid" required>
+  Person unique identifier
+</ParamField>
+
+<ParamField path="year" type="integer" required>
+  Year (e.g., 2024)
+</ParamField>
+
+**Response:**
+
+```json
+{
+  "total_duration": 2080.5,
+  "year": 2024
+}
+```
+
+---
+
+### Get Month Time Spents
+
+<api-endpoint method="get" path="/api/data/persons/{person_id}/time-spents/month/{year}/{month}">
+  Get aggregated time spents for a month.
+</api-endpoint>
+
+**Path Parameters:**
+
+<ParamField path="person_id" type="string" format="uuid" required>
+  Person unique identifier
+</ParamField>
+
+<ParamField path="year" type="integer" required>
+  Year (e.g., 2024)
+</ParamField>
+
+<ParamField path="month" type="integer" required>
+  Month (1-12)
+</ParamField>
+
+**Response:**
+
+```json
+{
+  "total_duration": 173.5,
+  "year": 2024,
+  "month": 3
+}
+```
+
+---
+
+### Get Week Time Spents
+
+<api-endpoint method="get" path="/api/data/persons/{person_id}/time-spents/week/{year}/{week}">
+  Get aggregated time spents for a week.
+</api-endpoint>
+
+**Path Parameters:**
+
+<ParamField path="person_id" type="string" format="uuid" required>
+  Person unique identifier
+</ParamField>
+
+<ParamField path="year" type="integer" required>
+  Year (e.g., 2024)
+</ParamField>
+
+<ParamField path="week" type="integer" required>
+  Week number (1-52)
+</ParamField>
+
+---
+
+### Get Day Time Spents
+
+<api-endpoint method="get" path="/api/data/persons/{person_id}/time-spents/day/{year}/{month}/{day}">
+  Get aggregated time spents for a day.
+</api-endpoint>
+
+**Path Parameters:**
+
+<ParamField path="person_id" type="string" format="uuid" required>
+  Person unique identifier
+</ParamField>
+
+<ParamField path="year" type="integer" required>
+  Year (e.g., 2024)
+</ParamField>
+
+<ParamField path="month" type="integer" required>
+  Month (1-12)
+</ParamField>
+
+<ParamField path="day" type="integer" required>
+  Day (1-31)
+</ParamField>
+
+---
+
+### Get All Month Time Spents
+
+<api-endpoint method="get" path="/api/data/persons/{person_id}/time-spents/month/all/{year}/{month}">
+  Get all detailed time spent entries for a month.
+</api-endpoint>
+
+**Path Parameters:**
+
+<ParamField path="person_id" type="string" format="uuid" required>
+  Person unique identifier
+</ParamField>
+
+<ParamField path="year" type="integer" required>
+  Year (e.g., 2024)
+</ParamField>
+
+<ParamField path="month" type="integer" required>
+  Month (1-12)
+</ParamField>
+
+**Permissions:** User can view their own, managers can view team members
+
+---
+
+## Quota Tracking
+
+### Get Month Quota Shots
+
+<api-endpoint method="get" path="/api/data/persons/{person_id}/quota-shots/month/{year}/{month}">
+  Get ended shots for quota calculation of a month.
+</api-endpoint>
+
+**Path Parameters:**
+
+<ParamField path="person_id" type="string" format="uuid" required>
+  Person unique identifier
+</ParamField>
+
+<ParamField path="year" type="integer" required>
+  Year (e.g., 2024)
+</ParamField>
+
+<ParamField path="month" type="integer" required>
+  Month (1-12)
+</ParamField>
+
+**Query Parameters:**
+
+<ParamField query="count_mode" type="string" default="weighted">
+  Count mode: `weighted`, `weighteddone`, `feedback`, `done`
+</ParamField>
+
+---
+
+### Get Week Quota Shots
+
+<api-endpoint method="get" path="/api/data/persons/{person_id}/quota-shots/week/{year}/{week}">
+  Get ended shots for quota calculation of a week.
+</api-endpoint>
+
+**Path Parameters:**
+
+<ParamField path="person_id" type="string" format="uuid" required>
+  Person unique identifier
+</ParamField>
+
+<ParamField path="year" type="integer" required>
+  Year (e.g., 2024)
+</ParamField>
+
+<ParamField path="week" type="integer" required>
+  Week number (1-52)
+</ParamField>
+
+**Query Parameters:**
+
+<ParamField query="count_mode" type="string" default="weighted">
+  Count mode: `weighted`, `weighteddone`, `feedback`, `done`
+</ParamField>
+
+---
+
+### Get Day Quota Shots
+
+<api-endpoint method="get" path="/api/data/persons/{person_id}/quota-shots/day/{year}/{month}/{day}">
+  Get ended shots for quota calculation of a day.
+</api-endpoint>
+
+**Path Parameters:**
+
+<ParamField path="person_id" type="string" format="uuid" required>
+  Person unique identifier
+</ParamField>
+
+<ParamField path="year" type="integer" required>
+  Year (e.g., 2024)
+</ParamField>
+
+<ParamField path="month" type="integer" required>
+  Month (1-12)
+</ParamField>
+
+<ParamField path="day" type="integer" required>
+  Day (1-31)
+</ParamField>
+
+**Query Parameters:**
+
+<ParamField query="count_mode" type="string" default="weighted">
+  Count mode: `weighted`, `weighteddone`, `feedback`, `done`
+</ParamField>
+
+---
+
+## Time Spent Tables
+
+### Get Year Table
+
+<api-endpoint method="get" path="/api/data/persons/time-spents/year-table">
+  Return a table of time spent by user and month for all years.
+</api-endpoint>
+
+**Query Parameters:**
+
+<ParamField query="project_id" type="string" format="uuid">
+  Filter by project
+</ParamField>
+
+<ParamField query="department_id" type="string" format="uuid">
+  Filter by department
+</ParamField>
+
+<ParamField query="studio_id" type="string" format="uuid">
+  Filter by studio
+</ParamField>
+
+---
+
+### Get Months Table
+
+<api-endpoint method="get" path="/api/data/persons/time-spents/month-table/{year}">
+  Return a table of time spent by user and month for a year.
+</api-endpoint>
+
+**Path Parameters:**
+
+<ParamField path="year" type="integer" required>
+  Year (e.g., 2024)
+</ParamField>
+
+---
+
+### Get Week Table
+
+<api-endpoint method="get" path="/api/data/persons/time-spents/week-table/{year}">
+  Return a table of time spent by user and week for a year.
+</api-endpoint>
+
+**Path Parameters:**
+
+<ParamField path="year" type="integer" required>
+  Year (e.g., 2024)
+</ParamField>
+
+---
+
+### Get Day Table
+
+<api-endpoint method="get" path="/api/data/persons/time-spents/day-table/{year}/{month}">
+  Return a table of time spent by user and day for a month.
+</api-endpoint>
+
+**Path Parameters:**
+
+<ParamField path="year" type="integer" required>
+  Year (e.g., 2024)
+</ParamField>
+
+<ParamField path="month" type="integer" required>
+  Month (1-12)
+</ParamField>
+
+---
+
+## Day Offs
+
+### Get Day Off
+
+<api-endpoint method="get" path="/api/data/persons/{person_id}/day-offs/{date}">
+  Get day off for a specific date.
+</api-endpoint>
+
+**Path Parameters:**
+
+<ParamField path="person_id" type="string" format="uuid" required>
+  Person unique identifier
+</ParamField>
+
+<ParamField path="date" type="string" format="date" required>
+  Date in YYYY-MM-DD format
+</ParamField>
+
+---
+
+### Get Day Offs for Month
+
+<api-endpoint method="get" path="/api/data/persons/day-offs/{year}/{month}">
+  Get all day offs for a month. Admins get all, users get their own.
+</api-endpoint>
+
+**Path Parameters:**
+
+<ParamField path="year" type="integer" required>
+  Year (e.g., 2024)
+</ParamField>
+
+<ParamField path="month" type="integer" required>
+  Month (1-12)
+</ParamField>
+
+---
+
+### Get Person Week Day Offs
+
+<api-endpoint method="get" path="/api/data/persons/{person_id}/day-offs/week/{year}/{week}">
+  Get all day offs for a person in a specific week.
+</api-endpoint>
+
+**Path Parameters:**
+
+<ParamField path="person_id" type="string" format="uuid" required>
+  Person unique identifier
+</ParamField>
+
+<ParamField path="year" type="integer" required>
+  Year (e.g., 2024)
+</ParamField>
+
+<ParamField path="week" type="integer" required>
+  Week number (1-52)
+</ParamField>
+
+---
+
+### Get Person Month Day Offs
+
+<api-endpoint method="get" path="/api/data/persons/{person_id}/day-offs/month/{year}/{month}">
+  Get all day offs for a person in a specific month.
+</api-endpoint>
+
+**Path Parameters:**
+
+<ParamField path="person_id" type="string" format="uuid" required>
+  Person unique identifier
+</ParamField>
+
+<ParamField path="year" type="integer" required>
+  Year (e.g., 2024)
+</ParamField>
+
+<ParamField path="month" type="integer" required>
+  Month (1-12)
+</ParamField>
+
+---
+
+### Get Person Year Day Offs
+
+<api-endpoint method="get" path="/api/data/persons/{person_id}/day-offs/year/{year}">
+  Get all day offs for a person in a specific year.
+</api-endpoint>
+
+**Path Parameters:**
+
+<ParamField path="person_id" type="string" format="uuid" required>
+  Person unique identifier
+</ParamField>
+
+<ParamField path="year" type="integer" required>
+  Year (e.g., 2024)
+</ParamField>
+
+---
+
+### Get All Person Day Offs
+
+<api-endpoint method="get" path="/api/data/persons/{person_id}/day-offs">
+  Get all day offs for a person.
+</api-endpoint>
+
+**Path Parameters:**
+
+<ParamField path="person_id" type="string" format="uuid" required>
+  Person unique identifier
+</ParamField>
+
+---
+
+## Person Actions
+
+### Invite Person
+
+<api-endpoint method="get" path="/api/actions/persons/{person_id}/invite">
+  Send an invitation email to a person to connect to Kitsu.
+</api-endpoint>
+
+**Path Parameters:**
+
+<ParamField path="person_id" type="string" format="uuid" required>
+  Person unique identifier
+</ParamField>
+
+**Permissions:** Admin only
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "Email sent"
+}
+```
+
+---
+
+### Add to Department
+
+<api-endpoint method="post" path="/api/actions/persons/{person_id}/departments/add">
+  Add a person to a department.
+</api-endpoint>
+
+**Path Parameters:**
+
+<ParamField path="person_id" type="string" format="uuid" required>
+  Person unique identifier
+</ParamField>
+
+**Request Body:**
+
+<ParamField body="department_id" type="string" format="uuid" required>
+  Department unique identifier
+</ParamField>
+
+**Permissions:** Admin only
+
+---
+
+### Remove from Department
+
+<api-endpoint method="delete" path="/api/actions/persons/{person_id}/departments/{department_id}">
+  Remove a person from a department.
+</api-endpoint>
+
+**Path Parameters:**
+
+<ParamField path="person_id" type="string" format="uuid" required>
+  Person unique identifier
+</ParamField>
+
+<ParamField path="department_id" type="string" format="uuid" required>
+  Department unique identifier
+</ParamField>
+
+**Permissions:** Admin only
+
+---
+
+### Change Password
+
+<api-endpoint method="post" path="/api/actions/persons/{person_id}/change-password">
+  Change password for a person (admin action).
+</api-endpoint>
+
+**Path Parameters:**
+
+<ParamField path="person_id" type="string" format="uuid" required>
+  Person unique identifier
+</ParamField>
+
+**Request Body:**
+
+<ParamField body="password" type="string" required>
+  New password
+</ParamField>
+
+<ParamField body="password_2" type="string" required>
+  Password confirmation
+</ParamField>
+
+**Permissions:** Admin only (cannot change other admin passwords)
+
+**Response:**
+
+```json
+{
+  "success": true
+}
+```
+
+---
+
+### Disable Two-Factor Authentication
+
+<api-endpoint method="delete" path="/api/actions/persons/{person_id}/disable-two-factor-authentication">
+  Disable two-factor authentication for a person.
+</api-endpoint>
+
+**Path Parameters:**
+
+<ParamField path="person_id" type="string" format="uuid" required>
+  Person unique identifier
+</ParamField>
+
+**Permissions:** Admin only (cannot disable for other admins)
+
+**Response:**
+
+```json
+{
+  "success": true
+}
+```
+
+---
+
+### Clear Avatar
+
+<api-endpoint method="delete" path="/api/actions/persons/{person_id}/clear-avatar">
+  Clear a person's avatar and remove the file.
+</api-endpoint>
+
+**Path Parameters:**
+
+<ParamField path="person_id" type="string" format="uuid" required>
+  Person unique identifier
+</ParamField>
+
+**Permissions:** Admin only
+
+---
+
+## Department Endpoints
+
+### List Departments
+
+<api-endpoint method="get" path="/api/data/departments">
+  Retrieve all departments.
+</api-endpoint>
+
+**Query Parameters:**
+
+<ParamField query="page" type="integer">
+  Page number for pagination
+</ParamField>
+
+<ParamField query="limit" type="integer">
+  Number of results per page
+</ParamField>
+
+<ParamField query="relations" type="boolean" default="false">
+  Include related entities
+</ParamField>
+
+**Permissions:** All authenticated users
+
+**Response:**
+
+```json
+[
+  {
+    "id": "dept-uuid",
+    "name": "Animation",
+    "color": "#FF5733",
+    "archived": false,
+    "created_at": "2024-01-15T10:30:00Z",
+    "updated_at": "2024-01-15T10:30:00Z"
+  }
+]
+```
+
+---
+
+### Create Department
+
+<api-endpoint method="post" path="/api/data/departments">
+  Create a new department.
+</api-endpoint>
+
+**Permissions:** Admin only
+
+**Request Body:**
+
+<ParamField body="name" type="string" required>
+  Department name (must be unique)
+</ParamField>
+
+<ParamField body="color" type="string" required>
+  Color in hex format (e.g., "#FF5733")
+</ParamField>
+
+**Example Request:**
+
+```json
+{
+  "name": "Animation",
+  "color": "#FF5733"
+}
+```
+
+---
+
+### Get Department
+
+<api-endpoint method="get" path="/api/data/departments/{department_id}">
+  Retrieve a specific department by ID.
+</api-endpoint>
+
+**Path Parameters:**
+
+<ParamField path="department_id" type="string" format="uuid" required>
+  Department unique identifier
+</ParamField>
+
+**Query Parameters:**
+
+<ParamField query="relations" type="boolean" default="true">
+  Include related entities
+</ParamField>
+
+**Permissions:** All authenticated users
+
+---
+
+### Update Department
+
+<api-endpoint method="put" path="/api/data/departments/{department_id}">
+  Update a department's information.
+</api-endpoint>
+
+**Path Parameters:**
+
+<ParamField path="department_id" type="string" format="uuid" required>
+  Department unique identifier
+</ParamField>
+
+**Request Body:**
+
+<ParamField body="name" type="string">
+  Department name
+</ParamField>
+
+<ParamField body="color" type="string">
+  Color in hex format
+</ParamField>
+
+<ParamField body="archived" type="boolean">
+  Archive status
+</ParamField>
+
+**Permissions:** Admin only
+
+---
+
+### Delete Department
+
+<api-endpoint method="delete" path="/api/data/departments/{department_id}">
+  Delete a department.
+</api-endpoint>
+
+**Path Parameters:**
+
+<ParamField path="department_id" type="string" format="uuid" required>
+  Department unique identifier
+</ParamField>
+
+**Permissions:** Admin only
+
+---
+
+## Department Software
+
+### Get All Department Software
+
+<api-endpoint method="get" path="/api/data/departments/software-licenses">
+  Get all software licenses organized by department.
+</api-endpoint>
+
+**Permissions:** Admin only
+
+**Response:**
+
+```json
+{
+  "animation-dept-id": [
+    {
+      "id": "software-uuid",
+      "name": "Maya",
+      "short_name": "MAYA",
+      "file_extension": ".ma",
+      "department_id": "animation-dept-id",
+      "created_at": "2024-01-15T10:30:00Z",
+      "updated_at": "2024-01-15T10:30:00Z"
+    }
+  ]
+}
+```
+
+---
+
+### Get Department Software
+
+<api-endpoint method="get" path="/api/data/departments/{department_id}/software-licenses">
+  Get all software for a specific department.
+</api-endpoint>
+
+**Path Parameters:**
+
+<ParamField path="department_id" type="string" format="uuid" required>
+  Department unique identifier
+</ParamField>
+
+**Permissions:** Admin only
+
+---
+
+### Add Software to Department
+
+<api-endpoint method="post" path="/api/data/departments/{department_id}/software-licenses">
+  Associate a software license with a department.
+</api-endpoint>
+
+**Path Parameters:**
+
+<ParamField path="department_id" type="string" format="uuid" required>
+  Department unique identifier
+</ParamField>
+
+**Request Body:**
+
+<ParamField body="software_id" type="string" format="uuid" required>
+  Software unique identifier
+</ParamField>
+
+**Permissions:** Admin only
+
+---
+
+### Remove Software from Department
+
+<api-endpoint method="delete" path="/api/data/departments/{department_id}/software-licenses/{software_id}">
+  Remove a software license from a department.
+</api-endpoint>
+
+**Path Parameters:**
+
+<ParamField path="department_id" type="string" format="uuid" required>
+  Department unique identifier
+</ParamField>
+
+<ParamField path="software_id" type="string" format="uuid" required>
+  Software unique identifier
+</ParamField>
+
+**Permissions:** Admin only
+
+---
+
+## Department Hardware
+
+### Get All Department Hardware
+
+<api-endpoint method="get" path="/api/data/departments/hardware-items">
+  Get all hardware items organized by department.
+</api-endpoint>
+
+**Permissions:** Admin only
+
+**Response:**
+
+```json
+{
+  "animation-dept-id": [
+    {
+      "id": "hardware-uuid",
+      "name": "Workstation",
+      "description": "High-performance workstation",
+      "department_id": "animation-dept-id",
+      "created_at": "2024-01-15T10:30:00Z",
+      "updated_at": "2024-01-15T10:30:00Z"
+    }
+  ]
+}
+```
+
+---
+
+### Get Department Hardware
+
+<api-endpoint method="get" path="/api/data/departments/{department_id}/hardware-items">
+  Get all hardware for a specific department.
+</api-endpoint>
+
+**Path Parameters:**
+
+<ParamField path="department_id" type="string" format="uuid" required>
+  Department unique identifier
+</ParamField>
+
+**Permissions:** Admin only
+
+---
+
+### Add Hardware to Department
+
+<api-endpoint method="post" path="/api/data/departments/{department_id}/hardware-items">
+  Associate a hardware item with a department.
+</api-endpoint>
+
+**Path Parameters:**
+
+<ParamField path="department_id" type="string" format="uuid" required>
+  Department unique identifier
+</ParamField>
+
+**Request Body:**
+
+<ParamField body="hardware_item_id" type="string" format="uuid" required>
+  Hardware item unique identifier
+</ParamField>
+
+**Permissions:** Admin only
+
+---
+
+### Remove Hardware from Department
+
+<api-endpoint method="delete" path="/api/data/departments/{department_id}/hardware-items/{hardware_item_id}">
+  Remove a hardware item from a department.
+</api-endpoint>
+
+**Path Parameters:**
+
+<ParamField path="department_id" type="string" format="uuid" required>
+  Department unique identifier
+</ParamField>
+
+<ParamField path="hardware_item_id" type="string" format="uuid" required>
+  Hardware item unique identifier
+</ParamField>
+
+**Permissions:** Admin only

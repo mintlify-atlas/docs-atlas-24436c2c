@@ -1,0 +1,609 @@
+---
+title: Event Stream
+description: Real-time event streaming using WebSocket connections for live updates
+---
+
+Kitsu provides a real-time event stream through WebSocket connections, allowing clients to receive live updates about changes in projects, tasks, comments, and other entities.
+
+## WebSocket Connection
+
+Connect to the event stream using Socket.IO at the `/events` namespace:
+
+```javascript
+import io from 'socket.io-client';
+
+const socket = io('https://your-kitsu-instance.com', {
+  path: '/socket.io',
+  transports: ['websocket'],
+  auth: {
+    token: 'your-jwt-token'
+  }
+});
+
+// Connect to the events namespace
+const eventsSocket = socket.of('/events');
+
+eventsSocket.on('connect', () => {
+  console.log('Connected to event stream');
+});
+
+eventsSocket.on('disconnect', () => {
+  console.log('Disconnected from event stream');
+});
+```
+
+### Authentication
+
+The WebSocket connection requires JWT authentication. Include your JWT token in the connection parameters:
+
+```javascript
+const socket = io('https://your-kitsu-instance.com', {
+  auth: {
+    token: localStorage.getItem('jwt_token')
+  }
+});
+```
+
+## Preview Room Events
+
+Preview rooms enable real-time collaborative review sessions where multiple users can synchronize their playback and annotations.
+
+### Join a Preview Room
+
+<CodeGroup>
+```javascript Client Event
+socket.emit('preview-room:join', {
+  playlist_id: 'a24a6ea4-ce75-4665-a070-57453082c25',
+  user_id: 'b35b7fb5-df86-5776-b181-68564193d36',
+  local_id: 'unique-client-id',
+  is_playing: false,
+  current_entity_id: null,
+  current_entity_index: 0,
+  current_preview_file_id: null,
+  current_preview_file_index: 0,
+  current_frame: 0,
+  is_repeating: false,
+  is_annotations_displayed: true,
+  is_zoom_enabled: false,
+  is_waveform_displayed: false,
+  is_laser_mode: false,
+  handle_in: null,
+  handle_out: null,
+  speed: 1.0,
+  comparing: {
+    enable: false,
+    task_type: null,
+    revision: null,
+    mode: 'sidebyside',
+    comparison_preview_index: 0
+  }
+});
+```
+
+```python Python Client
+from socketio import Client
+
+sio = Client()
+sio.connect('https://your-kitsu-instance.com', 
+            namespaces=['/events'],
+            auth={'token': 'your-jwt-token'})
+
+sio.emit('preview-room:join', {
+    'playlist_id': 'a24a6ea4-ce75-4665-a070-57453082c25',
+    'user_id': 'b35b7fb5-df86-5776-b181-68564193d36',
+    'local_id': 'unique-client-id',
+    'is_playing': False,
+    'current_frame': 0,
+    'is_annotations_displayed': True
+}, namespace='/events')
+```
+</CodeGroup>
+
+#### Parameters
+
+<ParamField body="playlist_id" type="string" required>
+  The UUID of the playlist to join
+</ParamField>
+
+<ParamField body="user_id" type="string" required>
+  The UUID of the user joining the room
+</ParamField>
+
+<ParamField body="local_id" type="string">
+  Unique client identifier for this connection
+</ParamField>
+
+<ParamField body="is_playing" type="boolean" default={false}>
+  Current playback state
+</ParamField>
+
+<ParamField body="current_entity_id" type="string">
+  UUID of the currently viewed entity (shot/asset)
+</ParamField>
+
+<ParamField body="current_entity_index" type="number">
+  Index of the current entity in the playlist
+</ParamField>
+
+<ParamField body="current_preview_file_id" type="string">
+  UUID of the currently displayed preview file
+</ParamField>
+
+<ParamField body="current_preview_file_index" type="number">
+  Index of the current preview file
+</ParamField>
+
+<ParamField body="current_frame" type="number" default={0}>
+  Current frame number in the preview
+</ParamField>
+
+<ParamField body="is_repeating" type="boolean" default={false}>
+  Whether playback should loop
+</ParamField>
+
+<ParamField body="is_annotations_displayed" type="boolean" default={false}>
+  Whether annotations should be visible
+</ParamField>
+
+<ParamField body="is_zoom_enabled" type="boolean" default={false}>
+  Whether zoom is enabled
+</ParamField>
+
+<ParamField body="is_waveform_displayed" type="boolean" default={false}>
+  Whether audio waveform should be displayed
+</ParamField>
+
+<ParamField body="is_laser_mode" type="boolean" default={false}>
+  Whether laser pointer mode is active
+</ParamField>
+
+<ParamField body="handle_in" type="number">
+  In point for the preview range
+</ParamField>
+
+<ParamField body="handle_out" type="number">
+  Out point for the preview range
+</ParamField>
+
+<ParamField body="speed" type="number" default={1.0}>
+  Playback speed multiplier
+</ParamField>
+
+<ParamField body="comparing" type="object">
+  Comparison mode configuration
+  
+  <ParamField body="comparing.enable" type="boolean" default={false}>
+    Whether comparison mode is enabled
+  </ParamField>
+  
+  <ParamField body="comparing.task_type" type="string">
+    Task type UUID for comparison
+  </ParamField>
+  
+  <ParamField body="comparing.revision" type="number">
+    Revision number to compare
+  </ParamField>
+  
+  <ParamField body="comparing.mode" type="string" default="sidebyside">
+    Comparison display mode (sidebyside, overlay, etc.)
+  </ParamField>
+  
+  <ParamField body="comparing.comparison_preview_index" type="number" default={0}>
+    Index of the preview being compared
+  </ParamField>
+</ParamField>
+
+### Leave a Preview Room
+
+```javascript
+socket.emit('preview-room:leave', {
+  playlist_id: 'a24a6ea4-ce75-4665-a070-57453082c25'
+});
+```
+
+### Open Playlist (Observer Mode)
+
+Join a playlist room as an observer without actively syncing:
+
+```javascript
+socket.emit('preview-room:open-playlist', {
+  playlist_id: 'a24a6ea4-ce75-4665-a070-57453082c25'
+});
+```
+
+### Close Playlist
+
+```javascript
+socket.emit('preview-room:close-playlist', {
+  playlist_id: 'a24a6ea4-ce75-4665-a070-57453082c25'
+});
+```
+
+### Update Room State
+
+Broadcast state changes to all participants:
+
+```javascript
+socket.emit('preview-room:room-updated', {
+  playlist_id: 'a24a6ea4-ce75-4665-a070-57453082c25',
+  user_id: 'b35b7fb5-df86-5776-b181-68564193d36',
+  is_playing: true,
+  current_frame: 150,
+  current_entity_id: 'c46c8gc6-eg97-6887-c292-79675204e47',
+  current_preview_file_id: 'd57d9hd7-fh08-7998-d403-80786315f58'
+});
+```
+
+## Receiving Preview Room Events
+
+Listen for events from other participants:
+
+### Room Updated
+
+```javascript
+socket.on('preview-room:room-updated', (data) => {
+  console.log('Room state updated:', data);
+  // Sync local player state with received data
+  if (data.only_newcomer && !isNewcomer) {
+    return; // Ignore updates meant only for newcomers
+  }
+  
+  updatePlayerState({
+    isPlaying: data.is_playing,
+    currentFrame: data.current_frame,
+    currentEntityId: data.current_entity_id,
+    isAnnotationsDisplayed: data.is_annotations_displayed,
+    speed: data.speed
+  });
+});
+```
+
+#### Response Fields
+
+<ResponseField name="playlist_id" type="string">
+  UUID of the playlist
+</ResponseField>
+
+<ResponseField name="user_id" type="string">
+  UUID of the user who triggered the update
+</ResponseField>
+
+<ResponseField name="people" type="array">
+  List of user IDs currently in the room
+</ResponseField>
+
+<ResponseField name="is_playing" type="boolean">
+  Current playback state
+</ResponseField>
+
+<ResponseField name="current_entity_id" type="string">
+  UUID of the currently viewed entity
+</ResponseField>
+
+<ResponseField name="current_frame" type="number">
+  Current frame number
+</ResponseField>
+
+<ResponseField name="only_newcomer" type="boolean">
+  If true, this update is only for users just joining
+</ResponseField>
+
+### People Updated
+
+```javascript
+socket.on('preview-room:room-people-updated', (data) => {
+  console.log('People in room:', data.people);
+  // Update UI to show who's in the room
+  updateParticipantsList(data.people);
+});
+```
+
+#### Response Fields
+
+<ResponseField name="playlist_id" type="string">
+  UUID of the playlist
+</ResponseField>
+
+<ResponseField name="people" type="array">
+  Array of user IDs currently in the preview room
+</ResponseField>
+
+## Annotation Events
+
+### Add Annotation
+
+```javascript
+socket.emit('preview-room:add-annotation', {
+  playlist_id: 'a24a6ea4-ce75-4665-a070-57453082c25',
+  annotation: {
+    x: 0.5,
+    y: 0.3,
+    text: 'Needs color correction',
+    time: 150,
+    drawing: null
+  }
+});
+
+socket.on('preview-room:add-annotation', (data) => {
+  // Another user added an annotation
+  addAnnotationToCanvas(data.annotation);
+});
+```
+
+### Update Annotation
+
+```javascript
+socket.emit('preview-room:update-annotation', {
+  playlist_id: 'a24a6ea4-ce75-4665-a070-57453082c25',
+  annotation_id: 'e68e0ie8-gi19-8009-e514-91897426g69',
+  annotation: {
+    x: 0.5,
+    y: 0.35,
+    text: 'Needs significant color correction'
+  }
+});
+
+socket.on('preview-room:update-annotation', (data) => {
+  updateAnnotation(data.annotation_id, data.annotation);
+});
+```
+
+### Remove Annotation
+
+```javascript
+socket.emit('preview-room:remove-annotation', {
+  playlist_id: 'a24a6ea4-ce75-4665-a070-57453082c25',
+  annotation_id: 'e68e0ie8-gi19-8009-e514-91897426g69'
+});
+
+socket.on('preview-room:remove-annotation', (data) => {
+  removeAnnotation(data.annotation_id);
+});
+```
+
+## Comparison Events
+
+### Change Version
+
+```javascript
+socket.emit('preview-room:change-version', {
+  playlist_id: 'a24a6ea4-ce75-4665-a070-57453082c25',
+  revision: 2
+});
+
+socket.on('preview-room:change-version', (data) => {
+  loadRevision(data.revision);
+});
+```
+
+### Pan & Zoom Changes
+
+```javascript
+// Main viewport pan/zoom
+socket.emit('preview-room:panzoom-changed', {
+  playlist_id: 'a24a6ea4-ce75-4665-a070-57453082c25',
+  x: 100,
+  y: 50,
+  scale: 1.5
+});
+
+socket.on('preview-room:panzoom-changed', (data) => {
+  syncPanZoom(data.x, data.y, data.scale);
+});
+
+// Comparison viewport pan/zoom
+socket.emit('preview-room:comparison-panzoom-changed', {
+  playlist_id: 'a24a6ea4-ce75-4665-a070-57453082c25',
+  x: 100,
+  y: 50,
+  scale: 1.5
+});
+
+socket.on('preview-room:comparison-panzoom-changed', (data) => {
+  syncComparisonPanZoom(data.x, data.y, data.scale);
+});
+```
+
+## Connection Management
+
+### Connection Events
+
+```javascript
+socket.on('connect', () => {
+  console.log('Connected to event stream');
+});
+
+socket.on('disconnect', (reason) => {
+  console.log('Disconnected:', reason);
+  // Handle reconnection logic
+});
+
+socket.on('connect_error', (error) => {
+  console.error('Connection error:', error);
+});
+```
+
+### Server Statistics
+
+Get current server connection statistics:
+
+<EndpointCard
+  method="GET"
+  path="/stats"
+  title="Get event stream statistics"
+>
+  Returns the current number of active WebSocket connections.
+</EndpointCard>
+
+```bash cURL
+curl https://your-kitsu-instance.com/stats
+```
+
+```json Response
+{
+  "nb_connections": 42
+}
+```
+
+## Complete Example
+
+Here's a complete example of setting up a preview room client:
+
+```javascript
+import io from 'socket.io-client';
+
+class PreviewRoomClient {
+  constructor(kitsuUrl, jwtToken, playlistId) {
+    this.playlistId = playlistId;
+    this.socket = io(kitsuUrl, {
+      path: '/socket.io',
+      transports: ['websocket'],
+      auth: { token: jwtToken }
+    });
+    
+    this.setupEventListeners();
+  }
+  
+  setupEventListeners() {
+    const socket = this.socket;
+    
+    socket.on('connect', () => {
+      console.log('Connected to Kitsu event stream');
+      this.joinRoom();
+    });
+    
+    socket.on('preview-room:room-updated', (data) => {
+      this.handleRoomUpdate(data);
+    });
+    
+    socket.on('preview-room:room-people-updated', (data) => {
+      this.handlePeopleUpdate(data);
+    });
+    
+    socket.on('preview-room:add-annotation', (data) => {
+      this.handleAddAnnotation(data);
+    });
+    
+    socket.on('preview-room:update-annotation', (data) => {
+      this.handleUpdateAnnotation(data);
+    });
+    
+    socket.on('preview-room:remove-annotation', (data) => {
+      this.handleRemoveAnnotation(data);
+    });
+    
+    socket.on('disconnect', () => {
+      console.log('Disconnected from event stream');
+    });
+  }
+  
+  joinRoom() {
+    this.socket.emit('preview-room:join', {
+      playlist_id: this.playlistId,
+      user_id: this.getCurrentUserId(),
+      local_id: this.generateLocalId(),
+      is_playing: false,
+      current_frame: 0,
+      is_annotations_displayed: true
+    });
+  }
+  
+  leaveRoom() {
+    this.socket.emit('preview-room:leave', {
+      playlist_id: this.playlistId
+    });
+  }
+  
+  updatePlaybackState(isPlaying, currentFrame) {
+    this.socket.emit('preview-room:room-updated', {
+      playlist_id: this.playlistId,
+      user_id: this.getCurrentUserId(),
+      is_playing: isPlaying,
+      current_frame: currentFrame
+    });
+  }
+  
+  addAnnotation(annotation) {
+    this.socket.emit('preview-room:add-annotation', {
+      playlist_id: this.playlistId,
+      annotation: annotation
+    });
+  }
+  
+  handleRoomUpdate(data) {
+    // Sync local state with room state
+    console.log('Room updated:', data);
+  }
+  
+  handlePeopleUpdate(data) {
+    console.log('People in room:', data.people);
+  }
+  
+  handleAddAnnotation(data) {
+    console.log('Annotation added:', data);
+  }
+  
+  handleUpdateAnnotation(data) {
+    console.log('Annotation updated:', data);
+  }
+  
+  handleRemoveAnnotation(data) {
+    console.log('Annotation removed:', data);
+  }
+  
+  getCurrentUserId() {
+    // Return current user's UUID
+    return localStorage.getItem('user_id');
+  }
+  
+  generateLocalId() {
+    return `client-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  }
+  
+  disconnect() {
+    this.leaveRoom();
+    this.socket.disconnect();
+  }
+}
+
+// Usage
+const client = new PreviewRoomClient(
+  'https://your-kitsu-instance.com',
+  'your-jwt-token',
+  'playlist-uuid'
+);
+
+// When starting playback
+client.updatePlaybackState(true, 0);
+
+// When adding an annotation
+client.addAnnotation({
+  x: 0.5,
+  y: 0.3,
+  text: 'Fix this',
+  time: 150
+});
+
+// Cleanup
+client.disconnect();
+```
+
+## Event Types
+
+The Kitsu API emits various event types through the event stream for different entity changes:
+
+- `notification:new` - New notification created
+- `notification:all-read` - All notifications marked as read
+- `task:update` - Task updated
+- `comment:new` - New comment added
+- `person:new` - New person created
+- `person:update` - Person updated
+- `person:delete` - Person deleted
+- `project:update` - Project updated
+- `project:delete` - Project deleted
+- `asset:new` - New asset created
+- `shot:new` - New shot created
+- `scene:new` - New scene created
+- `organisation:update` - Organisation settings updated
+
+These events are primarily used internally by the Kitsu web application for real-time UI updates.

@@ -1,0 +1,721 @@
+---
+title: "Comments & Playlists API Endpoints"
+description: "Complete API reference for comments, attachments, playlists, and build jobs"
+---
+
+## Comment Endpoints
+
+### Create Task Comment
+
+<CodeBlock>
+POST /api/actions/tasks/{task_id}/comment
+</CodeBlock>
+
+Create a new comment for a task with status change.
+
+**Path Parameters:**
+- `task_id` (string, uuid, required): Task unique identifier
+
+**Request Body:**
+```json
+{
+  "task_status_id": "status-uuid",  // Required
+  "comment": "Comment text with @mentions and #hashtags",
+  "person_id": "user-uuid",  // Optional, manager only
+  "created_at": "2023-01-01T12:00:00Z",  // Optional, manager only
+  "checklist": {"item1": "Check lighting"},
+  "links": ["https://example.com/reference"]
+}
+```
+
+**File Upload:**
+Supports multipart/form-data for attachment uploads.
+
+**Response:** `201 Created`
+```json
+{
+  "id": "comment-uuid",
+  "task_id": "task-uuid",
+  "person_id": "user-uuid",
+  "task_status_id": "status-uuid",
+  "comment": "Comment text",
+  "created_at": "2023-01-01T12:00:00Z"
+}
+```
+
+**Source:** `/app/blueprints/comments/resources.py:148`
+
+---
+
+### Create Multiple Comments
+
+<CodeBlock>
+POST /api/actions/projects/{project_id}/comments
+</CodeBlock>
+
+Create several comments at once for a project.
+
+**Path Parameters:**
+- `project_id` (string, uuid, required): Project unique identifier
+
+**Request Body:**
+```json
+[
+  {
+    "task_status_id": "status-uuid",
+    "object_id": "task-uuid",  // Required
+    "comment": "Comment text",
+    "person_id": "user-uuid",
+    "created_at": "2023-01-01T12:00:00Z",
+    "checklist": {},
+    "links": []
+  }
+]
+```
+
+**Response:** `201 Created`
+Array of created comments.
+
+**Source:** `/app/blueprints/comments/resources.py:452`
+
+---
+
+### Acknowledge Comment
+
+<CodeBlock>
+POST /api/actions/tasks/{task_id}/comments/{comment_id}/ack
+</CodeBlock>
+
+Acknowledge a comment. If already acknowledged, removes acknowledgement.
+
+**Path Parameters:**
+- `task_id` (string, uuid, required): Task unique identifier
+- `comment_id` (string, uuid, required): Comment unique identifier
+
+**Response:** `200 OK`
+```json
+{
+  "id": "comment-uuid",
+  "acknowledged": true
+}
+```
+
+**Source:** `/app/blueprints/comments/resources.py:100`
+
+---
+
+### Reply to Comment
+
+<CodeBlock>
+POST /api/actions/tasks/{task_id}/comments/{comment_id}/reply
+</CodeBlock>
+
+Add a reply to a comment.
+
+**Path Parameters:**
+- `task_id` (string, uuid, required): Task unique identifier
+- `comment_id` (string, uuid, required): Comment unique identifier
+
+**Form Data:**
+- `text` (string): Reply text content
+- `files` (file[]): Optional attachment files
+
+**Response:** `200 OK`
+```json
+{
+  "id": "reply-uuid",
+  "comment_id": "comment-uuid",
+  "text": "Reply text",
+  "person_id": "user-uuid",
+  "created_at": "2023-01-01T12:00:00Z"
+}
+```
+
+**Source:** `/app/blueprints/comments/resources.py:612`
+
+---
+
+### Delete Comment Reply
+
+<CodeBlock>
+DELETE /api/actions/tasks/{task_id}/comments/{comment_id}/replies/{reply_id}
+</CodeBlock>
+
+Delete a specific reply from a comment.
+
+**Path Parameters:**
+- `task_id` (string, uuid, required): Task unique identifier
+- `comment_id` (string, uuid, required): Comment unique identifier
+- `reply_id` (string, uuid, required): Reply unique identifier
+
+**Response:** `200 OK`
+
+**Permissions:** Reply author or administrators only.
+
+**Source:** `/app/blueprints/comments/resources.py:699`
+
+---
+
+## Attachment Endpoints
+
+### Add Attachments to Comment
+
+<CodeBlock>
+POST /api/actions/tasks/{task_id}/comments/{comment_id}/add-attachment
+</CodeBlock>
+
+Add one or more files as attachments to a comment.
+
+**Path Parameters:**
+- `task_id` (string, uuid, required): Task unique identifier
+- `comment_id` (string, uuid, required): Comment unique identifier
+
+**Form Data:**
+- `files` (file[], required): Files to attach
+- `reply_id` (string, uuid, optional): Link attachments to specific reply
+
+**Content Types:**
+- `multipart/form-data`
+- `image/png`, `image/gif`, `image/jpeg`
+
+**Response:** `201 Created`
+```json
+[
+  {
+    "id": "attachment-uuid",
+    "name": "document.pdf",
+    "mimetype": "application/pdf",
+    "size": 1024000,
+    "extension": "pdf",
+    "comment_id": "comment-uuid"
+  }
+]
+```
+
+**Source:** `/app/blueprints/comments/resources.py:365`
+
+---
+
+### Download Attachment
+
+<CodeBlock>
+GET /api/data/attachment-files/{attachment_file_id}/{file_name}
+</CodeBlock>
+
+Download a specific attachment file.
+
+**Path Parameters:**
+- `attachment_file_id` (string, uuid, required): Attachment unique identifier
+- `file_name` (string, required): File name to download
+
+**Response:** `200 OK`
+Binary file content with appropriate MIME type.
+
+**Source:** `/app/blueprints/comments/resources.py:22`
+
+---
+
+### Delete Attachment
+
+<CodeBlock>
+DELETE /api/actions/tasks/{task_id}/comments/{comment_id}/attachments/{attachment_id}
+</CodeBlock>
+
+Delete a specific attachment file.
+
+**Path Parameters:**
+- `task_id` (string, uuid, required): Task unique identifier
+- `comment_id` (string, uuid, required): Comment unique identifier
+- `attachment_id` (string, uuid, required): Attachment unique identifier
+
+**Response:** `204 No Content`
+
+**Permissions:** Comment author or project managers only.
+
+**Source:** `/app/blueprints/comments/resources.py:319`
+
+---
+
+### Get Project Attachment Files
+
+<CodeBlock>
+GET /api/data/projects/{project_id}/attachment-files
+</CodeBlock>
+
+Retrieve all attachment files for a project.
+
+**Path Parameters:**
+- `project_id` (string, uuid, required): Project unique identifier
+
+**Response:** `200 OK`
+Array of attachment file objects.
+
+**Permissions:** Administrator only.
+
+**Source:** `/app/blueprints/comments/resources.py:743`
+
+---
+
+### Get Task Attachment Files
+
+<CodeBlock>
+GET /api/data/tasks/{task_id}/attachment-files
+</CodeBlock>
+
+Retrieve all attachment files for a task.
+
+**Path Parameters:**
+- `task_id` (string, uuid, required): Task unique identifier
+
+**Response:** `200 OK`
+Array of attachment file objects.
+
+**Permissions:** Administrator only.
+
+**Source:** `/app/blueprints/comments/resources.py:806`
+
+---
+
+## Playlist Endpoints
+
+### Get Project Playlists
+
+<CodeBlock>
+GET /api/data/projects/{project_id}/playlists
+</CodeBlock>
+
+Retrieve all playlists for a project with pagination.
+
+**Path Parameters:**
+- `project_id` (string, uuid, required): Project unique identifier
+
+**Query Parameters:**
+- `page` (integer): Page number (default: 1)
+- `sort_by` (string): Field to sort by (default: "updated_at")
+- `task_type_id` (string, uuid): Filter by task type
+
+**Response:** `200 OK`
+```json
+[
+  {
+    "id": "playlist-uuid",
+    "name": "Review Playlist",
+    "project_id": "project-uuid",
+    "first_preview_file_id": "preview-uuid",
+    "updated_at": "2023-01-01T12:00:00Z"
+  }
+]
+```
+
+**Source:** `/app/blueprints/playlists/resources.py:25`
+
+---
+
+### Get Episode Playlists
+
+<CodeBlock>
+GET /api/data/projects/{project_id}/episodes/{episode_id}/playlists
+</CodeBlock>
+
+Retrieve all playlists for an episode.
+
+**Path Parameters:**
+- `project_id` (string, uuid, required): Project unique identifier
+- `episode_id` (string, required): Episode UUID, "main", or "all"
+
+**Query Parameters:**
+- `page` (integer): Page number
+- `sort_by` (string): Sort field
+- `task_type_id` (string, uuid): Filter by task type
+
+**Special Episode Values:**
+- `main`: Main pack (no episode)
+- `all`: All assets pack
+
+**Response:** `200 OK`
+Array of playlist objects.
+
+**Source:** `/app/blueprints/playlists/resources.py:106`
+
+---
+
+### Get Playlist
+
+<CodeBlock>
+GET /api/data/projects/{project_id}/playlists/{playlist_id}
+</CodeBlock>
+
+Retrieve a specific playlist with preview file revisions.
+
+**Path Parameters:**
+- `project_id` (string, uuid, required): Project unique identifier
+- `playlist_id` (string, uuid, required): Playlist unique identifier
+
+**Response:** `200 OK`
+```json
+{
+  "id": "playlist-uuid",
+  "name": "Review Playlist",
+  "project_id": "project-uuid",
+  "shots": [
+    {
+      "id": "shot-uuid",
+      "preview_file_id": "preview-uuid",
+      "preview_file_extension": "mp4",
+      "preview_file_revision": 3,
+      "preview_files": {
+        "task-type-uuid": [
+          {"id": "preview-uuid", "revision": 3}
+        ]
+      }
+    }
+  ],
+  "build_jobs": []
+}
+```
+
+**Source:** `/app/blueprints/playlists/resources.py:177`
+
+---
+
+### Get Entity Previews
+
+<CodeBlock>
+GET /api/data/entities/{entity_id}/preview-files
+</CodeBlock>
+
+Retrieve all preview files for an entity, grouped by task type.
+
+**Path Parameters:**
+- `entity_id` (string, uuid, required): Entity unique identifier
+
+**Response:** `200 OK`
+```json
+{
+  "animation-task-type-uuid": [
+    {
+      "id": "preview-uuid",
+      "revision": 3,
+      "extension": "mp4",
+      "width": 1920,
+      "height": 1080,
+      "duration": 5.5,
+      "previews": []  // Sub-previews with same revision
+    }
+  ]
+}
+```
+
+**Source:** `/app/blueprints/playlists/resources.py:241`
+
+---
+
+### Add Entity to Playlist
+
+<CodeBlock>
+POST /api/data/playlists/{playlist_id}/add-entity
+</CodeBlock>
+
+Atomically add an entity to a playlist.
+
+**Path Parameters:**
+- `playlist_id` (string, uuid, required): Playlist unique identifier
+
+**Request Body:**
+```json
+{
+  "entity_id": "entity-uuid",  // Required
+  "preview_file_id": "preview-uuid"  // Optional
+}
+```
+
+**Response:** `200 OK`
+Updated playlist object.
+
+**Permissions:** Manager project access required.
+
+**Source:** `/app/blueprints/playlists/resources.py:289`
+
+---
+
+## Build Job Endpoints
+
+### Build Playlist Movie
+
+<CodeBlock>
+GET /api/data/playlists/{playlist_id}/build/mp4
+</CodeBlock>
+
+Start a build job to compile playlist into MP4 movie.
+
+**Path Parameters:**
+- `playlist_id` (string, uuid, required): Playlist unique identifier
+
+**Query Parameters:**
+- `full` (boolean): Build full quality movie (default: false)
+
+**Response:** `200 OK`
+```json
+{
+  "id": "job-uuid",
+  "status": "running",
+  "created_at": "2023-01-01T12:00:00Z"
+}
+```
+
+**Permissions:** Manager project access required.
+
+**Source:** `/app/blueprints/playlists/resources.py:446`
+
+---
+
+### Download Playlist Build
+
+<CodeBlock>
+GET /api/data/playlists/{playlist_id}/jobs/{build_job_id}/build/mp4
+</CodeBlock>
+
+Download completed playlist build as MP4.
+
+**Path Parameters:**
+- `playlist_id` (string, uuid, required): Playlist unique identifier
+- `build_job_id` (string, uuid, required): Build job unique identifier
+
+**Response:** `200 OK`
+Binary MP4 file.
+
+**Error Response:** `400 Bad Request`
+```json
+{
+  "error": true,
+  "message": "Build is not finished"
+}
+```
+
+**Permissions:** Supervisor project access required.
+
+**Source:** `/app/blueprints/playlists/resources.py:349`
+
+---
+
+### Download Playlist ZIP
+
+<CodeBlock>
+GET /api/data/playlists/{playlist_id}/download/zip
+</CodeBlock>
+
+Download playlist as ZIP archive containing all preview files.
+
+**Path Parameters:**
+- `playlist_id` (string, uuid, required): Playlist unique identifier
+
+**Response:** `200 OK`
+Binary ZIP file.
+
+**Permissions:** Supervisor project access required.
+
+**Source:** `/app/blueprints/playlists/resources.py:540`
+
+---
+
+### Get Build Job
+
+<CodeBlock>
+GET /api/data/playlists/{playlist_id}/jobs/{build_job_id}
+</CodeBlock>
+
+Retrieve build job status and details.
+
+**Path Parameters:**
+- `playlist_id` (string, uuid, required): Playlist unique identifier
+- `build_job_id` (string, uuid, required): Build job unique identifier
+
+**Response:** `200 OK`
+```json
+{
+  "id": "job-uuid",
+  "status": "succeeded",  // "running", "succeeded", "failed"
+  "created_at": "2023-01-01T12:00:00Z"
+}
+```
+
+**Source:** `/app/blueprints/playlists/resources.py:602`
+
+---
+
+### Delete Build Job
+
+<CodeBlock>
+DELETE /api/data/playlists/{playlist_id}/jobs/{build_job_id}
+</CodeBlock>
+
+Remove a build job and its associated files.
+
+**Path Parameters:**
+- `playlist_id` (string, uuid, required): Playlist unique identifier
+- `build_job_id` (string, uuid, required): Build job unique identifier
+
+**Response:** `204 No Content`
+
+**Source:** `/app/blueprints/playlists/resources.py:657`
+
+---
+
+### Get Project Build Jobs
+
+<CodeBlock>
+GET /api/data/projects/{project_id}/build-jobs
+</CodeBlock>
+
+Retrieve all build jobs for a project.
+
+**Path Parameters:**
+- `project_id` (string, uuid, required): Project unique identifier
+
+**Response:** `200 OK`
+Array of build job objects.
+
+**Permissions:** Administrator only.
+
+**Source:** `/app/blueprints/playlists/resources.py:693`
+
+---
+
+### Get All Project Playlists (Admin)
+
+<CodeBlock>
+GET /api/data/projects/{project_id}/all-playlists
+</CodeBlock>
+
+Retrieve all playlists for a project (for synchronization).
+
+**Path Parameters:**
+- `project_id` (string, uuid, required): Project unique identifier
+
+**Query Parameters:**
+- `page` (integer): Page number
+
+**Response:** `200 OK`
+Array of all playlist objects.
+
+**Permissions:** Administrator only.
+
+**Source:** `/app/blueprints/playlists/resources.py:743`
+
+---
+
+## Temporary Playlist Endpoints
+
+### Generate Temp Playlist
+
+<CodeBlock>
+POST /api/data/projects/{project_id}/temp-playlists
+</CodeBlock>
+
+Generate a temporary playlist from task IDs without persisting.
+
+**Path Parameters:**
+- `project_id` (string, uuid, required): Project unique identifier
+
+**Query Parameters:**
+- `sort` (boolean): Whether to sort playlist (default: false)
+
+**Request Body:**
+```json
+{
+  "task_ids": [
+    "task-uuid-1",
+    "task-uuid-2"
+  ]
+}
+```
+
+**Response:** `200 OK`
+Array of playlisted entities with preview files.
+
+**Source:** `/app/blueprints/playlists/resources.py:794`
+
+---
+
+## Notification Endpoints
+
+### Notify Clients
+
+<CodeBlock>
+POST /api/data/playlists/{playlist_id}/notify-clients
+</CodeBlock>
+
+Notify clients that a playlist is ready for review.
+
+**Path Parameters:**
+- `playlist_id` (string, uuid, required): Playlist unique identifier
+
+**Request Body:**
+```json
+{
+  "studio_id": "studio-uuid",  // Optional
+  "department_id": "dept-uuid"  // Optional
+}
+```
+
+**Response:** `200 OK`
+```json
+{
+  "status": "success"
+}
+```
+
+**Permissions:** Manager project access required.
+
+**Source:** `/app/blueprints/playlists/resources.py:867`
+
+---
+
+## Error Responses
+
+All endpoints may return standard error responses:
+
+**401 Unauthorized:**
+```json
+{
+  "message": "JWT token required"
+}
+```
+
+**403 Forbidden:**
+```json
+{
+  "message": "Permission denied"
+}
+```
+
+**404 Not Found:**
+```json
+{
+  "message": "Resource not found"
+}
+```
+
+**400 Bad Request:**
+```json
+{
+  "message": "Validation error message"
+}
+```
+
+## Rate Limiting
+
+API rate limiting applies to all endpoints. Check response headers:
+- `X-RateLimit-Limit`: Requests per window
+- `X-RateLimit-Remaining`: Remaining requests
+- `X-RateLimit-Reset`: Reset timestamp
+
+## Authentication
+
+All endpoints require JWT authentication via the `Authorization` header:
+
+```
+Authorization: Bearer <jwt_token>
+```
+
+Obtain tokens via the authentication endpoints.

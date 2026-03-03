@@ -1,0 +1,122 @@
+---
+title: Introduction
+description: Welcome to Zou, the API that powers Kitsu - the production management platform for animation and VFX studios
+---
+
+# Welcome to Zou
+
+Zou is the REST API that serves as the memory of your animation/VFX production. It allows you to store and manage all aspects of your production data, from projects and assets to tasks and previews, while keeping all your pipeline tools perfectly synchronized.
+
+## What is Zou?
+
+Zou is a Flask-based REST API that provides a comprehensive backend for managing animation and VFX production workflows. Through Zou, you can link all the tools in your pipeline and ensure they stay in sync through real-time event streaming.
+
+The API is designed to work seamlessly with [Kitsu](https://www.cg-wire.com/kitsu), the production management web application, and can be integrated into your custom tools using the [Gazu Python client](https://gazu.cg-wire.com).
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Production Data Management" icon="database">
+    Store and organize projects, shots, assets, tasks, and file metadata with a powerful relational model
+  </Card>
+  
+  <Card title="Artist Progress Tracking" icon="chart-line">
+    Monitor task assignments, time spent, and completion status across your entire team
+  </Card>
+  
+  <Card title="Version Control" icon="code-branch">
+    Track preview files and working files with full version history and comments
+  </Card>
+  
+  <Card title="File Path Management" icon="folder-tree">
+    Generate consistent folder and file paths for any task using customizable file tree templates
+  </Card>
+  
+  <Card title="CSV Import/Export" icon="file-csv">
+    Bulk import production data and export reports in CSV format for easy integration
+  </Card>
+  
+  <Card title="Real-Time Event Stream" icon="bolt">
+    Subscribe to live updates for synchronizing distributed tools and triggering workflows
+  </Card>
+  
+  <Card title="JWT Authentication" icon="lock">
+    Secure access with JSON Web Tokens supporting multiple authentication strategies
+  </Card>
+  
+  <Card title="Role-Based Permissions" icon="users">
+    Fine-grained access control with roles (admin, manager, supervisor, artist, client, vendor)
+  </Card>
+</CardGroup>
+
+## Architecture Overview
+
+Zou is built on a modern Python stack:
+
+- **Flask** - Lightweight web framework
+- **SQLAlchemy** - ORM for database operations
+- **PostgreSQL** - Primary data store
+- **Redis** - Caching and token management
+- **Gunicorn** - Production WSGI server
+- **JWT** - Token-based authentication
+
+## Get Started
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Set up Zou with PostgreSQL, Redis, and Python dependencies
+  </Card>
+  
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Get the API running and make your first authenticated request
+  </Card>
+  
+  <Card title="API Reference" icon="book" href="/api-reference">
+    Explore all available endpoints and their parameters
+  </Card>
+  
+  <Card title="Authentication" icon="key" href="/authentication">
+    Learn about login, tokens, and security features
+  </Card>
+</CardGroup>
+
+## Use Cases
+
+Zou powers production workflows at studios worldwide:
+
+- **Asset and Shot Management** - Organize your production hierarchy
+- **Task Assignment** - Distribute work and track progress
+- **Review and Approval** - Comment on previews and manage revisions
+- **Pipeline Integration** - Connect DCC tools (Maya, Blender, Houdini) to production data
+- **Scheduling** - Plan milestones and track delivery dates
+- **Team Collaboration** - Share updates and communicate across departments
+
+## Community and Support
+
+Zou is developed by [CGWire](https://cg-wire.com) and is used by over 70 studios worldwide.
+
+<CardGroup cols={3}>
+  <Card title="GitHub" icon="github" href="https://github.com/cgwire/zou">
+    Source code and issue tracking
+  </Card>
+  
+  <Card title="Discord" icon="discord" href="https://discord.com/invite/VbCxtKN">
+    Join the community chat
+  </Card>
+  
+  <Card title="Documentation" icon="book" href="https://zou.cg-wire.com">
+    Official documentation site
+  </Card>
+</CardGroup>
+
+## Technical Requirements
+
+- Python 3.10 or higher (up to 3.14)
+- PostgreSQL 12 or higher
+- Redis 5.0 or higher
+- 2GB RAM minimum (4GB+ recommended)
+- Linux, macOS, or Windows
+
+## Next Steps
+
+Ready to get started? Head to the [Installation](/installation) guide to set up your Zou instance, or jump to the [Quick Start](/quickstart) to see it in action.

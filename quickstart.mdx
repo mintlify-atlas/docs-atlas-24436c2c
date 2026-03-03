@@ -1,80 +1,599 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quick Start
+description: Get Zou running and make your first authenticated API request in minutes
 ---
 
-## Get started in three steps
+# Quick Start Guide
 
-Get your documentation site running locally and make your first customization.
-
-### Step 1: Set up your local environment
-
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
-
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
-
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 3: Go live
-
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
-
-## Next steps
-
-Now that you have your docs running, explore these key features:
-
-<CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
-</CardGroup>
+This guide will help you start the Zou API server and make your first authenticated requests. By the end, you'll have created a project and retrieved production data via the REST API.
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+  This guide assumes you've completed the [Installation](/installation) steps, including creating the database and admin user.
 </Note>
+
+## Start the API Server
+
+### Development Mode
+
+For development and testing, use the built-in Flask development server:
+
+```bash
+python -m zou.debug
+```
+
+You should see:
+
+```
+The Kitsu API server is listening on http://127.0.0.1:5000
+```
+
+The server is now running and ready to accept requests.
+
+<Info>
+  The debug server auto-reloads on code changes and provides detailed error messages. Perfect for development!
+</Info>
+
+### Production Mode
+
+For production deployments, use Gunicorn (installed automatically with Zou):
+
+```bash
+gunicorn -c gunicorn.conf.py zou.app:app
+```
+
+Or with custom settings:
+
+```bash
+gunicorn -w 4 -b 0.0.0.0:5000 --timeout 600 zou.app:app
+```
+
+<CodeGroup>
+```python gunicorn.conf.py
+# gunicorn.conf.py
+import multiprocessing
+
+bind = "0.0.0.0:5000"
+workers = multiprocessing.cpu_count() * 2 + 1
+worker_class = "gevent"
+timeout = 600
+keepalive = 2
+
+# Logging
+accesslog = "-"
+errorlog = "-"
+loglevel = "info"
+```
+
+```bash systemd
+# /etc/systemd/system/zou.service
+[Unit]
+Description=Zou API Server
+After=network.target postgresql.service redis.service
+
+[Service]
+Type=notify
+User=zou
+WorkingDirectory=/opt/zou
+Environment="PATH=/opt/zou/venv/bin"
+EnvironmentFile=/opt/zou/.env
+ExecStart=/opt/zou/venv/bin/gunicorn -c gunicorn.conf.py zou.app:app
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+```
+</CodeGroup>
+
+<Warning>
+  Never use the debug server in production. Always use a production WSGI server like Gunicorn.
+</Warning>
+
+## Authentication
+
+### Login and Get Tokens
+
+Zou uses JWT (JSON Web Tokens) for authentication. First, log in with your admin credentials:
+
+<CodeGroup>
+```bash cURL
+curl -X POST "http://localhost:5000/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "admin@example.com",
+    "password": "YourSecurePassword123"
+  }'
+```
+
+```python Python
+import requests
+
+url = "http://localhost:5000/auth/login"
+payload = {
+    "email": "admin@example.com",
+    "password": "YourSecurePassword123"
+}
+
+response = requests.post(url, json=payload)
+response.raise_for_status()
+
+data = response.json()
+print(f"Login successful: {data['login']}")
+print(f"User: {data['user']['full_name']}")
+
+# Save the access token
+access_token = data['access_token']
+print(f"Access Token: {access_token[:50]}...")
+```
+
+```javascript JavaScript
+const response = await fetch('http://localhost:5000/auth/login', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    email: 'admin@example.com',
+    password: 'YourSecurePassword123',
+  }),
+});
+
+const data = await response.json();
+console.log('Login successful:', data.login);
+console.log('User:', data.user.full_name);
+
+// Save the access token
+const accessToken = data.access_token;
+```
+</CodeGroup>
+
+### Response Structure
+
+Successful login returns:
+
+```json
+{
+  "login": true,
+  "user": {
+    "id": "a24a6ea4-ce75-4665-a070-57453082c25",
+    "email": "admin@example.com",
+    "first_name": "Super",
+    "last_name": "Admin",
+    "full_name": "Super Admin",
+    "role": "admin",
+    "active": true,
+    "has_avatar": false
+  },
+  "organisation": {
+    "id": "org-id",
+    "name": "Your Studio",
+    "hours_by_day": 8,
+    "has_avatar": false
+  },
+  "access_token": "eyJ0eXAiOiJKV1QiLCJhbGc...",
+  "refresh_token": "eyJ0eXAiOiJKV1QiLCJhbGc..."
+}
+```
+
+<Info>
+  The `access_token` is valid for 7 days by default. Use the `refresh_token` to get a new access token without re-entering credentials.
+</Info>
+
+## Make Authenticated Requests
+
+Use the access token in the `Authorization` header for all subsequent requests:
+
+### Check Authentication Status
+
+<CodeGroup>
+```bash cURL
+curl -X GET "http://localhost:5000/auth/authenticated" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+```python Python
+headers = {
+    "Authorization": f"Bearer {access_token}"
+}
+
+response = requests.get(
+    "http://localhost:5000/auth/authenticated",
+    headers=headers
+)
+
+data = response.json()
+print(f"Authenticated: {data['authenticated']}")
+print(f"User: {data['user']['full_name']}")
+print(f"Role: {data['user']['role']}")
+```
+</CodeGroup>
+
+## Working with Projects
+
+### Get All Open Projects
+
+Retrieve currently active projects:
+
+<CodeGroup>
+```bash cURL
+curl -X GET "http://localhost:5000/data/projects/open" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+```python Python
+headers = {"Authorization": f"Bearer {access_token}"}
+
+response = requests.get(
+    "http://localhost:5000/data/projects/open",
+    headers=headers
+)
+
+projects = response.json()
+print(f"Found {len(projects)} open projects")
+
+for project in projects:
+    print(f"- {project['name']} (ID: {project['id']})")
+```
+</CodeGroup>
+
+### Create a New Project
+
+Create your first production project:
+
+<CodeGroup>
+```bash cURL
+curl -X POST "http://localhost:5000/data/projects" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "My First Project",
+    "production_type": "short",
+    "fps": "24",
+    "ratio": "16:9",
+    "resolution": "1920x1080"
+  }'
+```
+
+```python Python
+project_data = {
+    "name": "My First Project",
+    "production_type": "short",
+    "fps": "24",
+    "ratio": "16:9",
+    "resolution": "1920x1080"
+}
+
+response = requests.post(
+    "http://localhost:5000/data/projects",
+    headers=headers,
+    json=project_data
+)
+
+project = response.json()
+print(f"Created project: {project['name']}")
+print(f"Project ID: {project['id']}")
+project_id = project['id']
+```
+</CodeGroup>
+
+### Response Example
+
+```json
+{
+  "id": "b35b7fb5-df86-5776-b181-68564193d36",
+  "name": "My First Project",
+  "code": null,
+  "description": null,
+  "production_type": "short",
+  "project_status_id": "status-id",
+  "project_status_name": "Open",
+  "fps": "24",
+  "ratio": "16:9",
+  "resolution": "1920x1080",
+  "start_date": null,
+  "end_date": null,
+  "man_days": null,
+  "nb_episodes": 0,
+  "episode_span": 0,
+  "created_at": "2026-03-03T23:00:00",
+  "updated_at": "2026-03-03T23:00:00"
+}
+```
+
+## Working with Assets
+
+### Get Asset Types for a Project
+
+```python
+response = requests.get(
+    f"http://localhost:5000/data/projects/{project_id}/asset-types",
+    headers=headers
+)
+
+asset_types = response.json()
+for asset_type in asset_types:
+    print(f"- {asset_type['name']}")
+```
+
+### Create an Asset
+
+```python
+# First, get an asset type ID (e.g., "Character")
+asset_type_id = asset_types[0]['id']
+
+asset_data = {
+    "name": "Hero Character",
+    "description": "Main protagonist character",
+    "data": {}
+}
+
+response = requests.post(
+    f"http://localhost:5000/data/projects/{project_id}/asset-types/{asset_type_id}/assets/new",
+    headers=headers,
+    json=asset_data
+)
+
+asset = response.json()
+print(f"Created asset: {asset['name']} (ID: {asset['id']})")
+```
+
+## Complete Example: End-to-End Workflow
+
+Here's a complete script that demonstrates the full workflow:
+
+```python
+import requests
+from pprint import pprint
+
+# Configuration
+API_URL = "http://localhost:5000"
+EMAIL = "admin@example.com"
+PASSWORD = "YourSecurePassword123"
+
+# Step 1: Login
+print("\n=== Step 1: Login ===")
+response = requests.post(
+    f"{API_URL}/auth/login",
+    json={"email": EMAIL, "password": PASSWORD}
+)
+response.raise_for_status()
+data = response.json()
+
+access_token = data['access_token']
+user = data['user']
+print(f"Logged in as: {user['full_name']} ({user['role']})")
+
+# Headers for authenticated requests
+headers = {"Authorization": f"Bearer {access_token}"}
+
+# Step 2: Create a Project
+print("\n=== Step 2: Create Project ===")
+project_data = {
+    "name": "Demo Project",
+    "production_type": "short",
+    "fps": "24",
+    "ratio": "16:9",
+    "resolution": "1920x1080"
+}
+
+response = requests.post(
+    f"{API_URL}/data/projects",
+    headers=headers,
+    json=project_data
+)
+response.raise_for_status()
+project = response.json()
+project_id = project['id']
+print(f"Created: {project['name']} (ID: {project_id})")
+
+# Step 3: List Asset Types
+print("\n=== Step 3: Get Asset Types ===")
+response = requests.get(
+    f"{API_URL}/data/projects/{project_id}/asset-types",
+    headers=headers
+)
+response.raise_for_status()
+asset_types = response.json()
+
+if asset_types:
+    print("Available asset types:")
+    for at in asset_types:
+        print(f"  - {at['name']} (ID: {at['id']})")
+    
+    # Step 4: Create an Asset
+    print("\n=== Step 4: Create Asset ===")
+    asset_type_id = asset_types[0]['id']
+    
+    asset_data = {
+        "name": "Main Character",
+        "description": "The hero of our story"
+    }
+    
+    response = requests.post(
+        f"{API_URL}/data/projects/{project_id}/asset-types/{asset_type_id}/assets/new",
+        headers=headers,
+        json=asset_data
+    )
+    response.raise_for_status()
+    asset = response.json()
+    print(f"Created: {asset['name']} (ID: {asset['id']})")
+else:
+    print("No asset types available yet. Create them via the Kitsu UI.")
+
+# Step 5: List All Projects
+print("\n=== Step 5: List All Open Projects ===")
+response = requests.get(
+    f"{API_URL}/data/projects/open",
+    headers=headers
+)
+response.raise_for_status()
+projects = response.json()
+
+print(f"Total open projects: {len(projects)}")
+for p in projects:
+    print(f"  - {p['name']}")
+
+print("\n=== Workflow Complete ===")
+```
+
+### Run the Example
+
+```bash
+python quickstart_example.py
+```
+
+Expected output:
+
+```
+=== Step 1: Login ===
+Logged in as: Super Admin (admin)
+
+=== Step 2: Create Project ===
+Created: Demo Project (ID: b35b7fb5-df86-5776-b181-68564193d36)
+
+=== Step 3: Get Asset Types ===
+Available asset types:
+  - Character (ID: ...)
+  - Props (ID: ...)
+  - Environment (ID: ...)
+
+=== Step 4: Create Asset ===
+Created: Main Character (ID: ...)
+
+=== Step 5: List All Open Projects ===
+Total open projects: 1
+  - Demo Project
+
+=== Workflow Complete ===
+```
+
+## Using the Gazu Python Client
+
+For production integrations, use the [Gazu](https://gazu.cg-wire.com) Python client instead of raw HTTP requests:
+
+```bash
+pip install gazu
+```
+
+```python
+import gazu
+
+# Configure API endpoint
+gazu.set_host("http://localhost:5000/api")
+
+# Login
+gazu.log_in("admin@example.com", "YourSecurePassword123")
+
+# Create a project
+project = gazu.project.new_project(
+    name="My Project",
+    production_type="short"
+)
+
+print(f"Created project: {project['name']}")
+
+# Get all projects
+projects = gazu.project.all_open_projects()
+for p in projects:
+    print(f"- {p['name']}")
+
+# Create an asset
+asset = gazu.asset.new_asset(
+    project,
+    "Character",
+    "Hero",
+    description="Main character"
+)
+
+print(f"Created asset: {asset['name']}")
+```
+
+<Info>
+  Gazu provides a high-level, Pythonic interface to Zou and is the recommended way to integrate with your pipeline tools.
+</Info>
+
+## Event Stream
+
+Zou publishes real-time events for all data changes. Start the event stream server:
+
+```bash
+python -m zou.event_stream
+```
+
+Connect to the event stream:
+
+```python
+import socketio
+
+sio = socketio.Client()
+
+@sio.on('connect')
+def on_connect():
+    print('Connected to event stream')
+
+@sio.on('asset:new')
+def on_asset_created(data):
+    print(f"New asset created: {data}")
+
+sio.connect('http://localhost:5001')
+sio.wait()
+```
+
+## Next Steps
+
+Now that you're familiar with the basics:
+
+<CardGroup cols={2}>
+  <Card title="API Reference" icon="book" href="/api-reference">
+    Explore all available endpoints and their parameters
+  </Card>
+  
+  <Card title="Authentication Guide" icon="lock" href="/authentication">
+    Learn about 2FA, API keys, and advanced auth features
+  </Card>
+  
+  <Card title="Data Models" icon="database" href="/data-models">
+    Understand projects, assets, shots, tasks, and relationships
+  </Card>
+  
+  <Card title="File Management" icon="folder" href="/file-management">
+    Work with working files, previews, and file trees
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+### Connection Refused
+
+If you get connection errors, ensure:
+- The Zou server is running
+- You're using the correct host and port
+- Firewall rules allow connections
+
+### 401 Unauthorized
+
+If requests fail with 401:
+- Check that your access token is valid
+- Tokens expire after 7 days - log in again
+- Ensure the `Authorization` header is formatted correctly: `Bearer YOUR_TOKEN`
+
+### 500 Internal Server Error
+
+If you encounter server errors:
+- Check the Zou server logs for stack traces
+- Verify database connectivity
+- Ensure all required environment variables are set
+
+### Database Connection Failed
+
+If Zou can't connect to PostgreSQL:
+- Verify PostgreSQL is running: `pg_isready`
+- Check database credentials in environment variables
+- Ensure the `zoudb` database exists
+
+## Get Help
+
+If you run into issues:
+
+- Check the [GitHub Issues](https://github.com/cgwire/zou/issues)
+- Join the [Discord community](https://discord.com/invite/VbCxtKN)
+- Review the [official documentation](https://zou.cg-wire.com)
