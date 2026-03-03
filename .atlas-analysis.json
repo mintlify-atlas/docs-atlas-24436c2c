@@ -1,0 +1,161 @@
+{
+  "projectType": "api-service",
+  "projectName": "Zou (Kitsu API)",
+  "projectDescription": "API to store and manage animation/VFX production data for the Kitsu platform",
+  "theme": "sequoia",
+  "primaryColor": "#00b3c2",
+  "lightColor": "#4dd4e1",
+  "darkColor": "#008a96",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/architecture",
+              "concepts/data-model",
+              "concepts/authentication",
+              "concepts/permissions"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "configuration/environment-variables",
+              "configuration/database",
+              "configuration/storage",
+              "configuration/event-stream"
+            ]
+          },
+          {
+            "group": "CLI Reference",
+            "pages": [
+              "cli/overview",
+              "cli/database-commands",
+              "cli/admin-commands"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Authentication",
+            "pages": [
+              "api/auth/login",
+              "api/auth/tokens",
+              "api/auth/permissions"
+            ]
+          },
+          {
+            "group": "Projects",
+            "pages": [
+              "api/projects/overview",
+              "api/projects/endpoints"
+            ]
+          },
+          {
+            "group": "Assets",
+            "pages": [
+              "api/assets/overview",
+              "api/assets/asset-types",
+              "api/assets/endpoints"
+            ]
+          },
+          {
+            "group": "Shots & Sequences",
+            "pages": [
+              "api/shots/overview",
+              "api/shots/sequences",
+              "api/shots/endpoints"
+            ]
+          },
+          {
+            "group": "Tasks",
+            "pages": [
+              "api/tasks/overview",
+              "api/tasks/task-types",
+              "api/tasks/task-status",
+              "api/tasks/endpoints"
+            ]
+          },
+          {
+            "group": "Files & Previews",
+            "pages": [
+              "api/files/working-files",
+              "api/files/output-files",
+              "api/files/preview-files",
+              "api/files/endpoints"
+            ]
+          },
+          {
+            "group": "People & Teams",
+            "pages": [
+              "api/people/persons",
+              "api/people/departments",
+              "api/people/endpoints"
+            ]
+          },
+          {
+            "group": "Comments & Playlists",
+            "pages": [
+              "api/comments/overview",
+              "api/playlists/overview",
+              "api/playlists/endpoints"
+            ]
+          },
+          {
+            "group": "Events & Notifications",
+            "pages": [
+              "api/events/event-stream",
+              "api/events/notifications"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Store production data (projects, shots, assets, tasks)",
+    "Track artist progress and task assignments",
+    "Version control for preview files",
+    "File tree management and path generation",
+    "CSV import/export capabilities",
+    "Real-time event stream for synchronization",
+    "Authentication with JWT tokens",
+    "Role-based permissions system",
+    "Search and indexing with Meilisearch",
+    "Plugin system for extensibility"
+  ],
+  "publicApiSurface": [
+    "POST /auth/login",
+    "GET /data/projects",
+    "GET /data/assets",
+    "GET /data/shots",
+    "GET /data/tasks",
+    "GET /data/persons",
+    "POST /data/preview-files",
+    "GET /data/playlists",
+    "GET /events/stream",
+    "POST /actions/projects/{project_id}/create-assets",
+    "PUT /data/tasks/{task_id}",
+    "GET /data/file-tree",
+    "POST /import/csv/projects",
+    "GET /export/csv/projects",
+    "zou init-db",
+    "zou migrate-db",
+    "zou clean-auth-tokens",
+    "zou sync-with-ldap"
+  ]
+}
